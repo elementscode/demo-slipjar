@@ -1,10 +1,12 @@
+![Slipjar, an expense report app built with Elements: the approver's queue with reports waiting for a decision, how long each has waited, and recently decided reports marked Approved or Sent back.](https://elements.dev/demos/01a0f3fa-0bc6-7b70-8739-3a0d9aa1467b/poster?v=d36d012f7f48)
+
 # Slipjar
 
 > A demo app built with [Elements](https://elements.dev).
 
-Employees submit expense reports with receipt photos, and approvers approve or send them back with a comment, with live status, email at each step and monthly totals.
+Expenses with receipt photos, reports that approvers approve or send back with a comment, monthly totals, and email, all live.
 
-**Demo:** [Slipjar](TBD)
+**Demo:** [Slipjar](https://elements.dev/demos/01a0f3fa-0bc6-7b70-8739-3a0d9aa1467b)
 
 ## Agent specs
 
