@@ -1,0 +1,38 @@
+import "./style.css";
+import { formatMoney, plural } from "#app/shared/format";
+import { ReportSummary } from "#app/shared/services/reports";
+
+/**
+ * Sent to every approver when an employee submits a report.
+ *
+ * @email
+ */
+<html (report: ReportSummary)>
+  <body class="email report-submitted">
+    <div class="email-wrap">
+      <p class="brand">slipjar</p>
+      <h1>{report.ownerName} submitted a report</h1>
+
+      <table class="summary" role="presentation">
+        <tr>
+          <td class="label">Report</td>
+          <td>{report.title}</td>
+        </tr>
+        <tr>
+          <td class="label">Expenses</td>
+          <td>{plural(report.expenseCount, "expense")}</td>
+        </tr>
+        <tr>
+          <td class="label">Total</td>
+          <td class="amount">{formatMoney(report.totalCents)}</td>
+        </tr>
+      </table>
+
+      <p><a class="cta" href={`/reports/${report.id}`}>Review the report</a></p>
+
+      <div class="email-footer">
+        <p>You get this because you approve expenses in slipjar.</p>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,299 @@
+import "./style.css";
+import { redirect } from "@elements/app";
+import type { Listener } from "@elements/app";
+import favicon from "#app/shared/assets/favicons/favicon.svg";
+import { Layout } from "#app/shared/templates/layout";
+import { CurrentUser } from "#app/shared/services/auth";
+import { ReportDetail, ReportSummary, Expense } from "#app/shared/services/reports";
+import {
+  fetchReportDetail,
+  fetchUnfiled,
+  attachExpenses,
+  detachExpense,
+  submitReport,
+  decideReport,
+  deleteReport,
+} from "#app/shared/services/workflow";
+import { canEdit, canDecide } from "#app/shared/permissions";
+import {
+  CATEGORY_LABELS,
+  STATUS_LABELS,
+  statusPill,
+  formatMoney,
+  formatDay,
+  formatWhen,
+  formatStamp,
+  plural,
+} from "#app/shared/format";
+
+export interface ReportView {
+  detail: ReportDetail;
+  selectedId: string;
+  unfiled: Expense[];
+  picks: string[];
+  comment: string;
+  error: string;
+  busy: boolean;
+}
+
+const EVENT_VERBS = {
+  submitted: "submitted the report",
+  approved: "approved the report",
+  returned: "sent the report back",
+};
+
+function selected(view: ReportView): Expense | undefined {
+  return view.detail.expenses.find((e) => e.id === view.selectedId) ?? view.detail.expenses[0];
+}
+
+function refresh(view: ReportView, detail: ReportDetail) {
+  view.detail = detail;
+  view.error = "";
+
+  if (!detail.expenses.some((e) => e.id === view.selectedId)) {
+    view.selectedId = detail.expenses[0]?.id ?? "";
+  }
+}
+
+function onUpdate(view: ReportView, report: ReportSummary) {
+  refresh(view, fetchReportDetail(report.id));
+}
+
+function onSubmit(view: ReportView) {
+  view.busy = true;
+
+  try {
+    refresh(view, submitReport(view.detail.report.id));
+  } catch (err: any) {
+    view.error = err.message;
+  }
+
+  view.busy = false;
+}
+
+function onDecide(view: ReportView, decision: "approved" | "returned") {
+  view.busy = true;
+
+  try {
+    refresh(view, decideReport(view.detail.report.id, decision, view.comment));
+    view.comment = "";
+  } catch (err: any) {
+    view.error = err.message;
+  }
+
+  view.busy = false;
+}
+
+function onDetach(view: ReportView, expense: Expense) {
+  view.busy = true;
+
+  try {
+    refresh(view, detachExpense(view.detail.report.id, expense.id));
+    view.unfiled = fetchUnfiled();
+  } catch (err: any) {
+    view.error = err.message;
+  }
+
+  view.busy = false;
+}
+
+function onAttach(view: ReportView) {
+  view.busy = true;
+
+  try {
+    refresh(view, attachExpenses(view.detail.report.id, view.picks));
+    view.picks = [];
+    view.unfiled = fetchUnfiled();
+  } catch (err: any) {
+    view.error = err.message;
+  }
+
+  view.busy = false;
+}
+
+function onDelete(view: ReportView) {
+  try {
+    deleteReport(view.detail.report.id);
+    redirect("/");
+  } catch (err: any) {
+    view.error = err.message;
+  }
+}
+
+<html lang="en" class="page-report" (
+  user: CurrentUser,
+  initial: ReportView,
+  updates: Listener<ReportSummary>,
+  private view: ReportView = initial,
+) oninit={() => updates.on("notify", (report) => onUpdate(view, report))}>
+  <head>
+    <title>{view.detail.report.title} · slipjar</title>
+    <link rel="icon" type="image/svg+xml" href={favicon} />
+  </head>
+  <body>
+    <Layout {user} active={view.detail.report.userId === user.id ? "expenses" : "queue"}>
+      <a e:if={view.detail.report.userId === user.id} class="report-back link-muted" href="/">← My expenses</a>
+      <a e:else class="report-back link-muted" href="/queue">← Approvals</a>
+
+      <div class="report-head row">
+        <div class="stack is-xs">
+          <p class="report-owner">{view.detail.report.ownerName} · {plural(view.detail.report.expenseCount, "expense")}</p>
+          <h1>{view.detail.report.title}</h1>
+        </div>
+
+        <div class="report-total">
+          <span class={statusPill(view.detail.report.status)}><span class="pill-dot"></span>{STATUS_LABELS[view.detail.report.status]}</span>
+          <span class="money">{formatMoney(view.detail.report.totalCents)}</span>
+        </div>
+      </div>
+
+      <div class="report-layout">
+        <div class="report-main stack is-lg">
+          <div e:if={view.detail.report.status === "returned"} class="callout is-warning" role="status">
+            <p class="callout-title">Sent back by {view.detail.report.deciderName} on {formatWhen(view.detail.report.decidedAt)}</p>
+            <p>{view.detail.report.decisionComment}</p>
+          </div>
+
+          <div e:if={view.detail.report.status === "approved"} class="callout is-success" role="status">
+            <p class="callout-title">Approved by {view.detail.report.deciderName} on {formatWhen(view.detail.report.decidedAt)}</p>
+            <p e:if={view.detail.report.decisionComment}>{view.detail.report.decisionComment}</p>
+          </div>
+
+          <p e:if={view.error} class="error" role="alert">{view.error}</p>
+
+          <section class="card" aria-labelledby="lines-title">
+            <div class="card-head">
+              <h2 id="lines-title">Expenses</h2>
+            </div>
+
+            <p e:if={view.detail.expenses.length === 0} class="card-body hint">No expenses on this report yet.</p>
+
+            <ul e:else class="list">
+              <li e:for={e of view.detail.expenses}
+                  class={["line", selected(view)?.id === e.id && "is-selected"]}>
+                <button e:if={e.receiptUrl} class="line-thumb" aria-label={`Show the ${e.merchant} receipt`}
+                        onclick={() => view.selectedId = e.id}>
+                  <img src={e.receiptUrl} alt="" width="56" height="72">
+                </button>
+                <span e:else class="line-thumb"></span>
+
+                <div class="line-text">
+                  <span class="line-merchant">{e.merchant}</span>
+                  <span class="line-meta">{formatDay(e.spentOn)} · {CATEGORY_LABELS[e.category]}</span>
+                  <span e:if={e.note} class="line-note">{e.note}</span>
+                </div>
+
+                <div class="line-end">
+                  <span class="money">{formatMoney(e.amountCents)}</span>
+                  <button e:if={canEdit(user, view.detail.report)} class="is-ghost is-sm"
+                          disabled={view.busy} onclick={() => onDetach(view, e)}>Remove</button>
+                </div>
+              </li>
+            </ul>
+
+            <div e:if={view.detail.expenses.length > 0} class="line-total">
+              <span>Total</span>
+              <span class="money">{formatMoney(view.detail.report.totalCents)}</span>
+            </div>
+
+            <div e:if={canEdit(user, view.detail.report)} class="card-foot owner-actions">
+              <button e:if={view.detail.report.status === "draft"} class="is-ghost is-danger"
+                      disabled={view.busy} onclick={() => onDelete(view)}>Delete draft</button>
+              <span e:else></span>
+              <button class="is-primary" disabled={view.busy || view.detail.expenses.length === 0}
+                      onclick={() => onSubmit(view)}>
+                {view.detail.report.status === "returned" ? "Resubmit for approval" : "Submit for approval"}
+              </button>
+            </div>
+          </section>
+
+          <section e:if={canEdit(user, view.detail.report) && view.unfiled.length > 0} class="card attach" aria-labelledby="attach-title">
+            <div class="card-head">
+              <h2 id="attach-title">Add expenses to this report</h2>
+            </div>
+
+            <ul class="list">
+              <li e:for={e of view.unfiled}>
+                <label class="line">
+                  <input type="checkbox" group={view.picks} value={e.id}>
+                  <span class="line-text">
+                    <span class="line-merchant">{e.merchant}</span>
+                    <span class="line-meta">{formatDay(e.spentOn)} · {CATEGORY_LABELS[e.category]}</span>
+                  </span>
+                  <span class="money">{formatMoney(e.amountCents)}</span>
+                </label>
+              </li>
+            </ul>
+
+            <div class="card-foot">
+              <button disabled={view.busy || view.picks.length === 0} onclick={() => onAttach(view)}>
+                Add {view.picks.length > 0 ? plural(view.picks.length, "expense") : "selected"}
+              </button>
+            </div>
+          </section>
+        </div>
+
+        <aside class="report-side stack is-lg">
+          <section e:if={canDecide(user, view.detail.report)} class="card decision" aria-labelledby="decide-title">
+            <div class="card-head">
+              <h2 id="decide-title">Your decision</h2>
+            </div>
+
+            <div class="card-body stack">
+              <div class="field">
+                <label for="comment">Comment</label>
+                <textarea id="comment" value={view.comment}
+                          placeholder="Required when sending back. Optional when approving."/>
+              </div>
+
+              <div class="decision-actions">
+                <button class="is-danger" disabled={view.busy} onclick={() => onDecide(view, "returned")}>Send back</button>
+                <button class="is-primary" disabled={view.busy} onclick={() => onDecide(view, "approved")}>Approve</button>
+              </div>
+            </div>
+          </section>
+
+          <section e:if={selected(view)} class="card" aria-labelledby="viewer-title">
+            <div class="card-head">
+              <h2 id="viewer-title">Receipt</h2>
+            </div>
+
+            <a e:if={selected(view)?.receiptUrl} class="viewer" href={selected(view)?.receiptUrl} target="_blank" rel="noopener">
+              <img src={selected(view)?.receiptUrl} alt={`Receipt from ${selected(view)?.merchant}`} width="320" height="520">
+            </a>
+            <p e:else class="card-body hint">No receipt image.</p>
+
+            <div class="card-foot viewer-caption row">
+              <span>{selected(view)?.merchant}</span>
+              <span class="money">{formatMoney(selected(view)?.amountCents ?? 0)}</span>
+            </div>
+          </section>
+
+        </aside>
+
+        <div class="report-history">
+          <section class="card" aria-labelledby="history-title">
+            <div class="card-head">
+              <h2 id="history-title">History</h2>
+            </div>
+
+            <div class="card-body">
+              <p e:if={view.detail.events.length === 0} class="hint">Not submitted yet. Started {formatWhen(view.detail.report.createdAt)}.</p>
+
+              <ol e:else class="timeline">
+                <li e:for={ev of view.detail.events}>
+                  <span class={["timeline-dot", `is-${ev.kind}`]}></span>
+                  <div>
+                    <div class="timeline-what"><strong>{ev.userName}</strong> {EVENT_VERBS[ev.kind]}</div>
+                    <div class="timeline-when">{formatStamp(ev.createdAt)}</div>
+                    <p e:if={ev.comment} class="timeline-comment">{ev.comment}</p>
+                  </div>
+                </li>
+              </ol>
+            </div>
+          </section>
+        </div>
+      </div>
+    </Layout>
+  </body>
+</html>

@@ -1,0 +1,51 @@
+.email .brand {
+  margin: 0 0 24px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #0f6b57;
+}
+
+.email .summary {
+  width: 100%;
+  margin: 16px 0 24px;
+  border-collapse: collapse;
+}
+
+.email .summary td {
+  padding: 10px 0;
+  border-bottom: 1px solid #e6e4df;
+  font-size: 15px;
+}
+
+.email .summary .label {
+  width: 120px;
+  color: #6b675f;
+}
+
+.email .summary .amount {
+  font-weight: 600;
+}
+
+.email .comment {
+  margin: 0 0 24px;
+  padding: 12px 16px;
+  border-left: 3px solid #d08a1e;
+  background: #fdf6ea;
+  color: #3b3a36;
+}
+
+.email .comment.is-approved {
+  border-left-color: #1f8a5b;
+  background: #eef8f2;
+}
+
+.email .cta {
+  display: inline-block;
+  padding: 10px 18px;
+  border-radius: 6px;
+  background: #0f6b57;
+  color: #ffffff;
+  font-weight: 600;
+  text-decoration: none;
+}
