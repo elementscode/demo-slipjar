@@ -1,0 +1,110 @@
+import "./style.css";
+import { redirect } from "@elements/app";
+import favicon from "#app/shared/assets/favicons/favicon.svg";
+import { signin, SigninForm } from "#app/shared/services/auth";
+
+export interface DemoLogin {
+  id: string;
+  name: string;
+  email: string;
+  role: "employee" | "approver";
+}
+
+export const DEMO_PASSWORD = "receipts";
+
+function onSubmit(form: SigninForm) {
+  try {
+    signin(form);
+    form.error = "";
+    redirect("/");
+  } catch (err: any) {
+    form.error = err.message;
+  }
+}
+
+function onPick(form: SigninForm, login: DemoLogin) {
+  form.email = login.email;
+  form.password = DEMO_PASSWORD;
+  onSubmit(form);
+}
+
+<html lang="en" class="page-signin" (
+  demoLogins: DemoLogin[],
+  private form: SigninForm = { email: "", password: "", error: "" },
+)>
+  <head>
+    <title>Sign in · slipjar</title>
+    <meta name="description" content="Expense reports for the team.">
+    <link rel="icon" type="image/svg+xml" href={favicon} />
+  </head>
+  <body>
+    <main class="signin-main center">
+      <div class="signin-grid">
+        <form class="signin-form stack is-lg" onsubmit={() => onSubmit(form)}>
+          <div class="signin-brand row">
+            <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M5 2.5h14v19l-2.33-1.5-2.34 1.5L12 20l-2.33 1.5L7.33 20 5 21.5z" fill="currentColor"/>
+              <path d="M8.5 8h7M8.5 11.5h7M8.5 15h4" stroke="var(--bg)" stroke-width="1.6" stroke-linecap="round"/>
+            </svg>
+            <span>slipjar</span>
+          </div>
+
+          <div class="stack is-xs">
+            <h1>Sign in</h1>
+            <p class="lede">Log expenses, send reports, get paid back.</p>
+          </div>
+
+          <p e:if={form.error} class="error" role="alert">{form.error}</p>
+
+          <div class="stack">
+            <div class="field">
+              <label for="email">Work email</label>
+              <input id="email"
+                     name="email"
+                     type="email"
+                     value={form.email}
+                     autocomplete="email"
+                     autocapitalize="none"
+                     spellcheck={false}
+                     placeholder="you@company.com"
+                     required>
+            </div>
+
+            <div class="field">
+              <label for="password">Password</label>
+              <input id="password"
+                     name="password"
+                     type="password"
+                     value={form.password}
+                     autocomplete="current-password"
+                     required>
+            </div>
+          </div>
+
+          <button type="submit" class="is-primary is-block">Sign in</button>
+        </form>
+
+        <section e:if={demoLogins.length > 0} class="card" aria-labelledby="demo-title">
+          <div class="card-head">
+            <h2 id="demo-title">Demo accounts</h2>
+          </div>
+
+          <ul class="demo-list">
+            <li e:for={login of demoLogins}>
+              <button type="button" class="demo-login" onclick={() => onPick(form, login)}>
+                <span class="demo-name">{login.name}</span>
+                <span class="demo-email">{login.email}</span>
+                <span e:if={login.role === "approver"} class="pill is-accent">Approver</span>
+                <span e:else class="pill">Employee</span>
+              </button>
+            </li>
+          </ul>
+
+          <div class="card-foot demo-foot">
+            <p class="demo-password">Click one to sign in. Every password is <code>{DEMO_PASSWORD}</code>.</p>
+          </div>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,277 @@
+import "./style.css";
+import { redirect, ValidationError } from "@elements/app";
+import type { Listener } from "@elements/app";
+import favicon from "#app/shared/assets/favicons/favicon.svg";
+import { Layout } from "#app/shared/templates/layout";
+import { CurrentUser } from "#app/shared/services/auth";
+import { ReportSummary, Expense } from "#app/shared/services/reports";
+import { addExpense, deleteExpense, createReport, ExpenseForm, ExpenseErrors } from "#app/shared/services/workflow";
+import {
+  CATEGORIES,
+  CATEGORY_LABELS,
+  STATUS_LABELS,
+  statusPill,
+  formatMoney,
+  formatDay,
+  formatWhen,
+  plural,
+} from "#app/shared/format";
+
+export interface HomeState {
+  reports: ReportSummary[];
+  unfiled: Expense[];
+  flashId: string;
+}
+
+interface AddState {
+  form: ExpenseForm;
+  errors: ExpenseErrors;
+  error: string;
+  busy: boolean;
+  // Setting a single-file input's bound value back to null leaves the old
+  // filename showing, so a fresh key swaps in a new, empty input.
+  picker: { id: string }[];
+}
+
+interface GroupState {
+  ids: string[];
+  title: string;
+  error: string;
+}
+
+function blankExpense(spentOn: string): ExpenseForm {
+  return { spentOn, merchant: "", amount: "", category: "meals", note: "", receipt: null };
+}
+
+function onReportUpdate(state: HomeState, report: ReportSummary) {
+  let index = state.reports.findIndex((r) => r.id === report.id);
+
+  if (index === -1) {
+    state.reports.unshift(report);
+  } else {
+    state.reports[index] = report;
+  }
+
+  state.flashId = report.id;
+}
+
+function onAdd(add: AddState, state: HomeState) {
+  add.busy = true;
+
+  try {
+    state.unfiled = addExpense(add.form);
+    add.form = blankExpense(add.form.spentOn);
+    add.picker = [{ id: String(Date.now()) }];
+    add.errors = {};
+    add.error = "";
+  } catch (err: any) {
+    if (err instanceof ValidationError && err.errors) {
+      add.errors = err.errors;
+      add.error = "";
+    } else {
+      add.errors = {};
+      add.error = err.message;
+    }
+  }
+
+  add.busy = false;
+}
+
+function onDelete(state: HomeState, group: GroupState, expense: Expense) {
+  state.unfiled = deleteExpense(expense.id);
+  group.ids = group.ids.filter((id) => id !== expense.id);
+}
+
+function onGroup(group: GroupState) {
+  try {
+    let id = createReport(group.title, group.ids);
+    redirect(`/reports/${id}`);
+  } catch (err: any) {
+    group.error = err.message;
+  }
+}
+
+function pendingCents(reports: ReportSummary[]): number {
+  return reports.filter((r) => r.status === "submitted").reduce((sum, r) => sum + r.totalCents, 0);
+}
+
+function approvedThisMonthCents(reports: ReportSummary[]): number {
+  let now = new Date();
+
+  return reports
+    .filter((r) => r.status === "approved" && r.decidedAt && r.decidedAt.getMonth() === now.getMonth() && r.decidedAt.getFullYear() === now.getFullYear())
+    .reduce((sum, r) => sum + r.totalCents, 0);
+}
+
+function pickedCents(unfiled: Expense[], ids: string[]): number {
+  return unfiled.filter((e) => ids.includes(e.id)).reduce((sum, e) => sum + e.amountCents, 0);
+}
+
+function reportMeta(report: ReportSummary): string {
+  let when = report.status === "draft"
+    ? `Started ${formatWhen(report.createdAt)}`
+    : report.status === "submitted"
+      ? `Submitted ${formatWhen(report.submittedAt)}`
+      : `${report.status === "approved" ? "Approved" : "Sent back"} ${formatWhen(report.decidedAt)}`;
+
+  return `${plural(report.expenseCount, "expense")} · ${when}`;
+}
+
+<html lang="en" class="page-home" (
+  user: CurrentUser,
+  today: string,
+  initial: HomeState,
+  updates: Listener<ReportSummary>,
+  private state: HomeState = initial,
+  private add: AddState = { form: blankExpense(today), errors: {}, error: "", busy: false, picker: [{ id: "receipt" }] },
+  private group: GroupState = { ids: [], title: "", error: "" },
+) oninit={() => updates.on("notify", (report) => onReportUpdate(state, report))}>
+  <head>
+    <title>My expenses · slipjar</title>
+    <link rel="icon" type="image/svg+xml" href={favicon} />
+  </head>
+  <body>
+    <Layout {user} active="expenses">
+      <div class="home-head row">
+        <div class="stack is-xs">
+          <h1>My expenses</h1>
+          <p class="lede">Add receipts as you go, then group them into a report.</p>
+        </div>
+
+        <div class="home-stats row">
+          <div class="home-stat">
+            <span class="home-stat-label">Awaiting approval</span>
+            <span class="home-stat-value">{formatMoney(pendingCents(state.reports))}</span>
+          </div>
+          <div class="home-stat">
+            <span class="home-stat-label">Approved this month</span>
+            <span class="home-stat-value">{formatMoney(approvedThisMonthCents(state.reports))}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="home-grid">
+        <section class="home-add card" aria-labelledby="add-title">
+          <div class="card-head">
+            <h2 id="add-title">Add an expense</h2>
+          </div>
+
+          <form class="add-form card-body stack" onsubmit={() => onAdd(add, state)}>
+            <p e:if={add.error} class="error" role="alert">{add.error}</p>
+
+            <div class="amount-row">
+              <div class="field">
+                <label for="spent-on">Date</label>
+                <input id="spent-on" type="date" value={add.form.spentOn} max={today}
+                       class={[add.errors.spentOn && "is-error"]} required>
+                <p e:if={add.errors.spentOn} class="error">{add.errors.spentOn?.[0]}</p>
+              </div>
+
+              <div class="field">
+                <label for="amount">Amount</label>
+                <input id="amount" inputmode="decimal" placeholder="0.00" value={add.form.amount}
+                       class={[add.errors.amount && "is-error"]} autocomplete="off" required>
+                <p e:if={add.errors.amount} class="error">{add.errors.amount?.[0]}</p>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="merchant">Merchant</label>
+              <input id="merchant" placeholder="Where you paid" value={add.form.merchant}
+                     class={[add.errors.merchant && "is-error"]} autocomplete="off" required>
+              <p e:if={add.errors.merchant} class="error">{add.errors.merchant?.[0]}</p>
+            </div>
+
+            <div class="field">
+              <label for="category">Category</label>
+              <select id="category" value={add.form.category}>
+                <option e:for={c of CATEGORIES} value={c}>{CATEGORY_LABELS[c]}</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="note">Note</label>
+              <textarea id="note" placeholder="Who was there, what it was for" value={add.form.note}/>
+            </div>
+
+            <div class="field receipt-pick">
+              <label for="receipt">Receipt photo</label>
+              <input e:for={slot of add.picker} id="receipt" type="file" accept="image/png,image/jpeg,image/webp,image/gif"
+                     value={add.form.receipt} class={[add.errors.receipt && "is-error"]}>
+              <p e:if={add.errors.receipt} class="error">{add.errors.receipt?.[0]}</p>
+              <p e:else class="hint">JPEG, PNG or WebP, up to 8 MB.</p>
+            </div>
+
+            <button type="submit" class="is-primary is-block" disabled={add.busy}>
+              {add.busy ? "Adding…" : "Add expense"}
+            </button>
+          </form>
+        </section>
+
+        <section class="home-unfiled card" aria-labelledby="unfiled-title">
+          <div class="card-head">
+            <h2 id="unfiled-title">Not on a report yet<span class="count">{state.unfiled.length}</span></h2>
+          </div>
+
+          <p e:if={state.unfiled.length === 0} class="empty">Every expense is on a report. New ones land here.</p>
+
+          <ul e:else class="list">
+            <li e:for={e of state.unfiled} class={["expense-row", group.ids.includes(e.id) && "is-picked"]}>
+              <input type="checkbox" group={group.ids} value={e.id} aria-label={`Select ${e.merchant}`}>
+              <a e:if={e.receiptUrl} href={e.receiptUrl} target="_blank" rel="noopener">
+                <img class="thumb" src={e.receiptUrl} alt={`Receipt from ${e.merchant}`} width="40" height="40">
+              </a>
+              <span e:else class="thumb"></span>
+              <div class="expense-text">
+                <span class="expense-merchant truncate">{e.merchant}</span>
+                <span class="expense-meta truncate">{formatDay(e.spentOn)} · {CATEGORY_LABELS[e.category]}{e.note ? ` · ${e.note}` : ""}</span>
+              </div>
+              <span class="money">{formatMoney(e.amountCents)}</span>
+              <button class="remove is-ghost is-sm" aria-label={`Delete ${e.merchant}`}
+                      onclick={() => onDelete(state, group, e)}>
+                <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                  <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                </svg>
+              </button>
+            </li>
+          </ul>
+
+          <div e:if={state.unfiled.length > 0} class="card-foot">
+            <form class="group-form" onsubmit={() => onGroup(group)}>
+              <input placeholder={group.ids.length === 0 ? "Select expenses, then name the report" : `Name this report (${plural(group.ids.length, "expense")}, ${formatMoney(pickedCents(state.unfiled, group.ids))})`}
+                     value={group.title} aria-label="Report name">
+              <button type="submit" class="is-primary" disabled={group.ids.length === 0 || !group.title.trim()}>Create report</button>
+            </form>
+            <p e:if={group.error} class="error group-error" role="alert">{group.error}</p>
+          </div>
+        </section>
+
+        <section class="home-reports card" aria-labelledby="reports-title">
+          <div class="card-head">
+            <h2 id="reports-title">Reports<span class="count">{state.reports.length}</span></h2>
+          </div>
+
+          <p e:if={state.reports.length === 0} class="empty">No reports yet. Select expenses above to start one.</p>
+
+          <ul e:else class="list">
+            <li e:for={r of state.reports} class={[state.flashId === r.id && "is-flash"]}>
+              <a class="report-row" href={`/reports/${r.id}`}>
+                <div class="stack is-xs">
+                  <span class="report-title">{r.title}</span>
+                  <span class="report-meta">{reportMeta(r)}</span>
+                </div>
+                <div class="report-side">
+                  <span class="money">{formatMoney(r.totalCents)}</span>
+                  <span class={statusPill(r.status)}><span class="pill-dot"></span>{STATUS_LABELS[r.status]}</span>
+                </div>
+                <p e:if={r.decisionComment} class={["report-comment", r.status === "approved" && "is-approved"]}>
+                  “{r.decisionComment}” <cite>{r.deciderName}</cite>
+                </p>
+              </a>
+            </li>
+          </ul>
+        </section>
+      </div>
+    </Layout>
+  </body>
+</html>

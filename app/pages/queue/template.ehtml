@@ -1,0 +1,135 @@
+import "./style.css";
+import type { Listener } from "@elements/app";
+import favicon from "#app/shared/assets/favicons/favicon.svg";
+import { Layout } from "#app/shared/templates/layout";
+import { CurrentUser } from "#app/shared/services/auth";
+import { ReportSummary } from "#app/shared/services/reports";
+import { STATUS_LABELS, statusPill, formatMoney, formatWhen, plural } from "#app/shared/format";
+
+export interface QueueState {
+  waiting: ReportSummary[];
+  decided: ReportSummary[];
+  newId: string;
+}
+
+const RECENT = 8;
+const DAY = 24 * 3600 * 1000;
+
+function onUpdate(state: QueueState, report: ReportSummary) {
+  state.waiting = state.waiting.filter((r) => r.id !== report.id);
+  state.decided = state.decided.filter((r) => r.id !== report.id);
+
+  if (report.status === "submitted") {
+    state.waiting = [...state.waiting, report];
+  }
+
+  if (report.status === "approved" || report.status === "returned") {
+    state.decided = [report, ...state.decided].slice(0, RECENT);
+  }
+
+  state.newId = report.id;
+}
+
+function initials(name: string): string {
+  return name.split(/\s+/).map((part) => part[0] ?? "").join("").slice(0, 2).toUpperCase();
+}
+
+function waitingDays(report: ReportSummary): number {
+  return report.submittedAt ? Math.floor((Date.now() - report.submittedAt.getTime()) / DAY) : 0;
+}
+
+function waitingLabel(report: ReportSummary): string {
+  let days = waitingDays(report);
+
+  return days === 0 ? "Today" : `${plural(days, "day")} waiting`;
+}
+
+function totalCents(reports: ReportSummary[]): number {
+  return reports.reduce((sum, r) => sum + r.totalCents, 0);
+}
+
+<html lang="en" class="page-queue" (
+  user: CurrentUser,
+  initial: QueueState,
+  updates: Listener<ReportSummary>,
+  private state: QueueState = initial,
+) oninit={() => updates.on("notify", (report) => onUpdate(state, report))}>
+  <head>
+    <title>Approvals · slipjar</title>
+    <link rel="icon" type="image/svg+xml" href={favicon} />
+  </head>
+  <body>
+    <Layout {user} active="queue">
+      <div class="queue-head row">
+        <div class="stack is-xs">
+          <h1>Approvals</h1>
+          <p class="lede">Submitted reports, oldest first. New ones appear as they come in.</p>
+        </div>
+
+        <div class="queue-stats row">
+          <div class="queue-stat">
+            <span class="queue-stat-label">Waiting</span>
+            <span class="queue-stat-value">{state.waiting.length}</span>
+          </div>
+          <div class="queue-stat">
+            <span class="queue-stat-label">Total waiting</span>
+            <span class="queue-stat-value">{formatMoney(totalCents(state.waiting))}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stack is-xl">
+        <section class="card" aria-labelledby="waiting-title">
+          <div class="card-head">
+            <h2 id="waiting-title">Waiting for a decision<span class="count">{state.waiting.length}</span></h2>
+          </div>
+
+          <p e:if={state.waiting.length === 0} class="empty">Nothing waiting. You're all caught up.</p>
+
+          <ul e:else class="list">
+            <li e:for={r of state.waiting} class={[state.newId === r.id && "is-new"]}>
+              <a class="queue-row" href={`/reports/${r.id}`}>
+                <span class="avatar-initials" aria-hidden="true">{initials(r.ownerName)}</span>
+                <div class="queue-text">
+                  <span class="queue-title truncate">{r.title}</span>
+                  <span class="queue-meta">
+                    {r.ownerName} · {plural(r.expenseCount, "expense")}{r.userId === user.id ? " · yours, another approver decides" : ""}
+                  </span>
+                </div>
+                <span class={["queue-age", waitingDays(r) >= 3 && "is-old"]}>{waitingLabel(r)}</span>
+                <div class="queue-end">
+                  <span class="money">{formatMoney(r.totalCents)}</span>
+                  <span class="link-action">{r.userId === user.id ? "View" : "Review"} →</span>
+                </div>
+              </a>
+            </li>
+          </ul>
+        </section>
+
+        <section class="card" aria-labelledby="decided-title">
+          <div class="card-head">
+            <h2 id="decided-title">Recently decided</h2>
+          </div>
+
+          <p e:if={state.decided.length === 0} class="empty">No decisions yet.</p>
+
+          <ul e:else class="list">
+            <li e:for={r of state.decided} class={[state.newId === r.id && "is-new"]}>
+              <a class="queue-row" href={`/reports/${r.id}`}>
+                <span class="avatar-initials" aria-hidden="true">{initials(r.ownerName)}</span>
+                <div class="queue-text">
+                  <span class="queue-title truncate">{r.title}</span>
+                  <span class="queue-meta">{r.ownerName} · {r.deciderName} on {formatWhen(r.decidedAt)}</span>
+                </div>
+                <span class={[statusPill(r.status), "queue-status"]}><span class="pill-dot"></span>{STATUS_LABELS[r.status]}</span>
+                <div class="queue-end">
+                  <span class="money">{formatMoney(r.totalCents)}</span>
+                </div>
+              </a>
+            </li>
+          </ul>
+        </section>
+      </div>
+    </Layout>
+  </body>
+</html>

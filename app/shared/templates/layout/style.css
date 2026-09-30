@@ -1,0 +1,88 @@
+.layout-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 1px solid var(--rule);
+  background: color-mix(in oklab, var(--bg) 88%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+.layout-bar {
+  justify-content: space-between;
+  max-width: var(--container-shell);
+  margin-inline: auto;
+  padding: var(--space-3) var(--space-6);
+}
+
+.layout-brand {
+  gap: var(--space-2);
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-lg);
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.layout-mark {
+  display: inline-flex;
+  color: var(--accent);
+}
+
+.layout-nav {
+  flex: 1;
+  margin-inline-start: var(--space-6);
+}
+
+.layout-nav a {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--ink-soft);
+  text-decoration: none;
+}
+
+.layout-nav a:hover {
+  color: var(--ink);
+  background: var(--bg-soft);
+}
+
+.layout-nav a.is-active {
+  color: var(--ink);
+  background: var(--bg-muted);
+}
+
+.layout-user {
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}
+
+.layout-main {
+  padding-block: var(--space-8) var(--space-16);
+}
+
+@media (max-width: 48rem) {
+  .layout-bar {
+    flex-wrap: wrap;
+    row-gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .layout-nav {
+    order: 3;
+    flex-basis: 100%;
+    margin-inline-start: 0;
+  }
+
+  .layout-nav a {
+    padding-inline: var(--space-2);
+  }
+
+  .layout-name {
+    display: none;
+  }
+
+  .layout-main {
+    padding-block: var(--space-6) var(--space-12);
+  }
+}
