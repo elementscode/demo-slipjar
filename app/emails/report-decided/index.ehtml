@@ -1,0 +1,49 @@
+import "./style.css";
+import { formatMoney, plural } from "#app/shared/format";
+import { ReportSummary } from "#app/shared/services/reports";
+
+/**
+ * Sent to the employee when an approver approves their report or sends it
+ * back.
+ *
+ * @email
+ */
+<html (report: ReportSummary)>
+  <body class="email report-decided">
+    <div class="email-wrap">
+      <p class="brand">slipjar</p>
+
+      <h1 e:if={report.status === "approved"}>Your report was approved</h1>
+      <h1 e:else>Your report was sent back</h1>
+
+      <p e:if={report.status === "approved"}>
+        {report.deciderName} approved <strong>{report.title}</strong>. It goes out with the next reimbursement run.
+      </p>
+      <p e:else>
+        {report.deciderName} sent <strong>{report.title}</strong> back. Make the change they asked for and submit it again.
+      </p>
+
+      <p e:if={report.decisionComment}
+         class={["comment", report.status === "approved" && "is-approved"]}>
+        “{report.decisionComment}”
+      </p>
+
+      <table class="summary" role="presentation">
+        <tr>
+          <td class="label">Expenses</td>
+          <td>{plural(report.expenseCount, "expense")}</td>
+        </tr>
+        <tr>
+          <td class="label">Total</td>
+          <td class="amount">{formatMoney(report.totalCents)}</td>
+        </tr>
+      </table>
+
+      <p><a class="cta" href={`/reports/${report.id}`}>Open the report</a></p>
+
+      <div class="email-footer">
+        <p>Sent by slipjar, your company's expense reports.</p>
+      </div>
+    </div>
+  </body>
+</html>

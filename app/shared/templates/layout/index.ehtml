@@ -1,0 +1,42 @@
+import "./style.css";
+import { redirect } from "@elements/app";
+import { CurrentUser, signout } from "#app/shared/services/auth";
+
+function onSignout() {
+  signout();
+  redirect("/signin");
+}
+
+<Layout (user: CurrentUser, active: string, wide: boolean = false)>
+  <div class="app">
+    <header class="layout-header">
+      <div class="layout-bar row">
+        <a class="layout-brand row" href="/">
+          <span class="layout-mark">
+            <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M5 2.5h14v19l-2.33-1.5-2.34 1.5L12 20l-2.33 1.5L7.33 20 5 21.5z" fill="currentColor"/>
+              <path d="M8.5 8h7M8.5 11.5h7M8.5 15h4" stroke="var(--bg)" stroke-width="1.6" stroke-linecap="round"/>
+            </svg>
+          </span>
+          slipjar
+        </a>
+
+        <nav class="layout-nav cluster is-xs" aria-label="Main">
+          <a href="/" class={[active === "expenses" && "is-active"]}>My expenses</a>
+          <a e:if={user.role === "approver"} href="/queue" class={[active === "queue" && "is-active"]}>Approvals</a>
+          <a e:if={user.role === "approver"} href="/totals" class={[active === "totals" && "is-active"]}>Totals</a>
+        </nav>
+
+        <div class="layout-user row gap-3">
+          <span class="layout-name">{user.name}</span>
+          <span e:if={user.role === "approver"} class="pill is-accent">Approver</span>
+          <button class="is-ghost is-sm" onclick={() => onSignout()}>Sign out</button>
+        </div>
+      </div>
+    </header>
+
+    <main class={["layout-main page-shell", wide && "is-wide"]}>
+      <slot/>
+    </main>
+  </div>
+</Layout>

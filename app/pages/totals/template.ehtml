@@ -1,0 +1,220 @@
+import "./style.css";
+import { sql } from "@elements/app";
+import type { Listener } from "@elements/app";
+import favicon from "#app/shared/assets/favicons/favicon.svg";
+import { Layout } from "#app/shared/templates/layout";
+import { CurrentUser, requireApprover } from "#app/shared/services/auth";
+import { ReportSummary } from "#app/shared/services/reports";
+import { Category, CATEGORY_LABELS, formatMoney, plural } from "#app/shared/format";
+
+export interface TotalsRow {
+  key: string;
+  label: string;
+  approvedCents: number;
+  pendingCents: number;
+  expenseCount: number;
+}
+
+export interface Totals {
+  month: string;
+  byCategory: TotalsRow[];
+  byPerson: TotalsRow[];
+  approvedCents: number;
+  pendingCents: number;
+  approvedReports: number;
+}
+
+/**
+ * Totals for one month, by the day each expense was spent. Approved counts
+ * toward the total; submitted shows as pending beside it.
+ */
+export function loadTotals(month: string): Totals {
+  let start = `${month}-01`;
+
+  let byCategory = sql<TotalsRow>(`
+    select c.category::text as key,
+           ''::text as label,
+           coalesce(sum(e.amountCents) filter (where r.status = 'approved'), 0)::int as approvedCents,
+           coalesce(sum(e.amountCents) filter (where r.status = 'submitted'), 0)::int as pendingCents,
+           count(e.id) filter (where r.status = 'approved')::int as expenseCount
+      from unnest(enum_range(null::expenseCategory)) as c(category)
+      left join expenses e
+        on e.category = c.category
+       and e.spentOn >= ${start}::date
+       and e.spentOn < (${start}::date + interval '1 month')
+      left join reports r on r.id = e.reportId and r.status in ('approved', 'submitted')
+     group by c.category
+     order by approvedCents desc, c.category
+  `).all();
+
+  for (let row of byCategory) {
+    row.label = CATEGORY_LABELS[row.key as Category];
+  }
+
+  let byPerson = sql<TotalsRow>(`
+    select u.id::text as key,
+           u.name as label,
+           coalesce(sum(e.amountCents) filter (where r.status = 'approved'), 0)::int as approvedCents,
+           coalesce(sum(e.amountCents) filter (where r.status = 'submitted'), 0)::int as pendingCents,
+           count(e.id) filter (where r.status = 'approved')::int as expenseCount
+      from expenses e
+      join reports r on r.id = e.reportId and r.status in ('approved', 'submitted')
+      join users u on u.id = e.userId
+     where e.spentOn >= ${start}::date
+       and e.spentOn < (${start}::date + interval '1 month')
+     group by u.id, u.name
+     order by approvedCents desc, u.name
+  `).all();
+
+  let approvedReports = sql<{ n: number }>(`
+    select count(distinct r.id)::int as n
+      from reports r
+      join expenses e on e.reportId = r.id
+     where r.status = 'approved'
+       and e.spentOn >= ${start}::date
+       and e.spentOn < (${start}::date + interval '1 month')
+  `).firstOrThrow().n;
+
+  return {
+    month,
+    byCategory,
+    byPerson,
+    approvedCents: byCategory.reduce((sum, r) => sum + r.approvedCents, 0),
+    pendingCents: byCategory.reduce((sum, r) => sum + r.pendingCents, 0),
+    approvedReports,
+  };
+}
+
+/** @rpc */
+export function fetchTotals(month: string): Totals {
+  requireApprover();
+
+  return loadTotals(month);
+}
+
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+export function shiftMonth(month: string, by: number): string {
+  let [y, m] = month.split("-").map(Number);
+  let d = new Date(Date.UTC(y, m - 1 + by, 1));
+
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+function monthName(month: string): string {
+  let [y, m] = month.split("-").map(Number);
+
+  return `${MONTH_NAMES[m - 1]} ${y}`;
+}
+
+function barWidth(row: TotalsRow, rows: TotalsRow[]): string {
+  let max = Math.max(...rows.map((r) => r.approvedCents), 1);
+
+  return `${(row.approvedCents / max) * 100}%`;
+}
+
+function onUpdate(state: { totals: Totals }) {
+  state.totals = fetchTotals(state.totals.month);
+}
+
+<BarTable (rows: TotalsRow[], first: string)>
+  <table class="bars">
+    <thead>
+      <tr>
+        <th scope="col">{first}</th>
+        <th scope="col" class="bar-cell"><span class="sr-only">Share</span></th>
+        <th scope="col" class="num">Approved</th>
+        <th scope="col" class="num col-pending">Pending</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr e:for={row of rows.map((r) => ({ ...r, id: r.key }))}>
+        <th scope="row" class="label">{row.label}</th>
+        <td class="bar-cell">
+          <div class="bar-track">
+            <div class={["bar", row.approvedCents === 0 && "is-zero"]} style={`width: ${barWidth(row, rows)}`}></div>
+            <div class="bar-tip" role="tooltip">
+              <strong>{row.label}</strong> · {formatMoney(row.approvedCents)} approved, {plural(row.expenseCount, "expense")}
+              {row.pendingCents > 0 ? ` · ${formatMoney(row.pendingCents)} pending` : ""}
+            </div>
+          </div>
+        </td>
+        <td class="num">{formatMoney(row.approvedCents)}</td>
+        <td class="num pending col-pending">{row.pendingCents > 0 ? formatMoney(row.pendingCents) : "–"}</td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <th scope="row">Total</th>
+        <td class="bar-cell"></td>
+        <td class="num">{formatMoney(rows.reduce((sum, r) => sum + r.approvedCents, 0))}</td>
+        <td class="num pending col-pending">{formatMoney(rows.reduce((sum, r) => sum + r.pendingCents, 0))}</td>
+      </tr>
+    </tfoot>
+  </table>
+</BarTable>
+
+<html lang="en" class="page-totals" (
+  user: CurrentUser,
+  initial: Totals,
+  currentMonth: string,
+  updates: Listener<ReportSummary>,
+  private state: { totals: Totals } = { totals: initial },
+) oninit={() => updates.on("notify", () => onUpdate(state))}>
+  <head>
+    <title>Totals for {monthName(state.totals.month)} · slipjar</title>
+    <link rel="icon" type="image/svg+xml" href={favicon} />
+  </head>
+  <body>
+    <Layout {user} active="totals">
+      <div class="totals-head row">
+        <div class="stack is-xs">
+          <h1>Monthly totals</h1>
+          <p class="lede">Approved spend by the month it was spent, with what is still waiting.</p>
+        </div>
+
+        <nav class="month-nav row" aria-label="Month">
+          <a class="button is-sm" href={`/totals?month=${shiftMonth(state.totals.month, -1)}`} aria-label="Previous month">←</a>
+          <span class="month-name">{monthName(state.totals.month)}</span>
+          <a class={["button is-sm", state.totals.month >= currentMonth && "is-disabled"]}
+             href={`/totals?month=${shiftMonth(state.totals.month, 1)}`} aria-label="Next month">→</a>
+        </nav>
+      </div>
+
+      <div class="tiles">
+        <div class="tile card">
+          <span class="tile-label">Approved</span>
+          <span class="tile-value">{formatMoney(state.totals.approvedCents)}</span>
+          <span class="tile-note">{plural(state.totals.approvedReports, "report")}</span>
+        </div>
+        <div class="tile card">
+          <span class="tile-label">Awaiting approval</span>
+          <span class="tile-value">{formatMoney(state.totals.pendingCents)}</span>
+          <span class="tile-note">Counts once approved</span>
+        </div>
+        <div class="tile card">
+          <span class="tile-label">Top category</span>
+          <span class="tile-value">{state.totals.approvedCents > 0 ? state.totals.byCategory[0].label : "–"}</span>
+          <span class="tile-note">{state.totals.approvedCents > 0 ? `${Math.round(state.totals.byCategory[0].approvedCents / state.totals.approvedCents * 100)}% of approved` : "Nothing approved yet"}</span>
+        </div>
+      </div>
+
+      <div class="breakdowns">
+        <section class="card" aria-labelledby="category-title">
+          <div class="card-head">
+            <h2 id="category-title">By category</h2>
+          </div>
+          <BarTable rows={state.totals.byCategory} first="Category" />
+        </section>
+
+        <section class="card" aria-labelledby="person-title">
+          <div class="card-head">
+            <h2 id="person-title">By person</h2>
+          </div>
+          <p e:if={state.totals.byPerson.length === 0} class="empty">No expenses submitted for this month.</p>
+          <BarTable e:else rows={state.totals.byPerson} first="Person" />
+        </section>
+      </div>
+    </Layout>
+  </body>
+</html>
