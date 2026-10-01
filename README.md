@@ -23,6 +23,25 @@ app.
 elements create slipjar -scaffold=elementscode/demo-slipjar
 ```
 
+## How it's built
+
+Slipjar needed expenses with receipt photos, reports that move from draft to approved or sent back, emails at each step, monthly totals and pages that stay current for both employees and approvers. Each of those is a part of Elements, so the agent spent its 22 minutes on the workflow itself.
+
+### What Elements gave the app
+
+- **Reports that update in place.** A `reportUpdates` channel in `app/shared/services/reports.ts` carries each report's new summary whenever the report changes. An employee's list, the approver's queue, the report page and the monthly totals all listen, so a decision shows up on every open screen as it happens.
+- **Receipt photos from the form.** `addExpense` in `app/shared/services/workflow.ts` takes the receipt as a file straight from the form and stores the bytes with the expense in one transaction. `app/routes/receipts.ts` serves each image to its owner or an approver at a url made from its id and hash.
+- **An approval workflow in a few functions.** `submitReport` moves a draft to submitted, and `decideReport` approves it or sends it back with a required comment. Its status guard lets exactly one approver decide, and `canDecide` in `app/shared/permissions.ts` hands every report to an approver other than its owner.
+- **Background work.** `NotifyApproversJob` sends approvers the `report-submitted` email, and `NotifyEmployeeJob` sends the owner `report-decided` with the outcome.
+- **Server calls as function calls.** Pages call `@rpc` functions such as `addExpense`, `attachExpenses`, `submitReport` and `fetchTotals` straight from the template. The totals page counts approved spending by category for each month, with submitted amounts shown as pending.
+- **Data and roles from SQL.** Two migrations define the workflow and seed two approvers, five employees and reports in every status, with receipts.
+
+### What the agent got from the tooling
+
+The agent ran 35 builds in 22 minutes, and every one passed. By the build's own timer, the median build finished in 43 milliseconds, so it checked its work after each edit and kept going. The agent read 32 manual pages as it reached each part, from `recipes/live-dashboard` and `channel` to `style/email`, then wrote 25 tests and checked its pages at phone width in a real browser.
+
+Start in `app/shared/services/workflow.ts`.
+
 ## Demo accounts
 
 The seed creates two approvers, five employees and 13 reports from July to
