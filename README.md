@@ -30,10 +30,15 @@ Slipjar needed expenses with receipt photos, reports that move from draft to app
 ### What Elements gave the app
 
 - **Reports that update in place.** A channel carries each report's new summary whenever it changes. An employee's list, the approver's queue, the report page and the monthly totals all listen, so a decision shows up on every open screen as it happens.
+
 - **Receipt photos from the form.** An employee adds an expense with its receipt photo straight from a form, and the image is stored with the expense in one transaction and shown only to its owner and approvers.
+
 - **An approval workflow.** A draft is submitted, then approved or sent back with a comment. Exactly one approver decides, and each report goes to an approver other than its owner.
+
 - **Background work.** Jobs email the approvers when a report is submitted and the employee when it is decided.
+
 - **Server calls as function calls.** Adding expenses, building reports, submitting, deciding and the monthly totals call server functions straight from the page with `@rpc`. Totals count approved spending by category, with submitted amounts shown as pending.
+
 - **Data and roles from SQL.** Migrations define the workflow and seed two approvers, five employees and reports in every status, with receipts. Sessions and roles keep the queue with the approvers.
 
 ### What the project server gave the agent
