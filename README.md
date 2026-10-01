@@ -29,12 +29,12 @@ Slipjar needed expenses with receipt photos, reports that move from draft to app
 
 ### What Elements gave the app
 
-- **Reports that update in place.** A `reportUpdates` channel in `app/shared/services/reports.ts` carries each report's new summary whenever the report changes. An employee's list, the approver's queue, the report page and the monthly totals all listen, so a decision shows up on every open screen as it happens.
-- **Receipt photos from the form.** `addExpense` in `app/shared/services/workflow.ts` takes the receipt as a file straight from the form and stores the bytes with the expense in one transaction. `app/routes/receipts.ts` serves each image to its owner or an approver at a url made from its id and hash.
-- **An approval workflow in a few functions.** `submitReport` moves a draft to submitted, and `decideReport` approves it or sends it back with a required comment. Its status guard lets exactly one approver decide, and `canDecide` in `app/shared/permissions.ts` hands every report to an approver other than its owner.
-- **Background work.** `NotifyApproversJob` sends approvers the `report-submitted` email, and `NotifyEmployeeJob` sends the owner `report-decided` with the outcome.
-- **Server calls as function calls.** Pages call `@rpc` functions such as `addExpense`, `attachExpenses`, `submitReport` and `fetchTotals` straight from the template. The totals page counts approved spending by category for each month, with submitted amounts shown as pending.
-- **Data and roles from SQL.** Two migrations define the workflow and seed two approvers, five employees and reports in every status, with receipts.
+- **Reports that update in place.** A channel carries each report's new summary whenever it changes. An employee's list, the approver's queue, the report page and the monthly totals all listen, so a decision shows up on every open screen as it happens.
+- **Receipt photos from the form.** An employee adds an expense with its receipt photo straight from a form, and the image is stored with the expense in one transaction and shown only to its owner and approvers.
+- **An approval workflow.** A draft is submitted, then approved or sent back with a comment. Exactly one approver decides, and each report goes to an approver other than its owner.
+- **Background work.** Jobs email the approvers when a report is submitted and the employee when it is decided.
+- **Server calls as function calls.** Adding expenses, building reports, submitting, deciding and the monthly totals call server functions straight from the page with `@rpc`. Totals count approved spending by category, with submitted amounts shown as pending.
+- **Data and roles from SQL.** Migrations define the workflow and seed two approvers, five employees and reports in every status, with receipts. Sessions and roles keep the queue with the approvers.
 
 ### What the project server gave the agent
 
@@ -43,8 +43,6 @@ The project server runs alongside the agent and answers as soon as a file is sav
 ### What shipped
 
 The app type-checks with zero errors and all 25 tests pass. Every page works on desktop and phone.
-
-Start in `app/shared/services/workflow.ts`.
 
 ## Demo accounts
 
