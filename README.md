@@ -38,7 +38,7 @@ Slipjar needed expenses with receipt photos, reports that move from draft to app
 
 ### What the agent got from the tooling
 
-The agent ran 35 builds in 22 minutes, and every one passed. By the build's own timer, the median build finished in 43 milliseconds, so it checked its work after each edit and kept going. The agent read 32 manual pages as it reached each part, from `recipes/live-dashboard` and `channel` to `style/email`, then wrote 25 tests and checked its pages at phone width in a real browser.
+The agent ran 35 builds in 22 minutes, checking its work after each edit, and every one passed. The agent read 32 manual pages as it reached each part, from `recipes/live-dashboard` and `channel` to `style/email`, then wrote 25 tests and checked its pages at phone width in a real browser.
 
 Start in `app/shared/services/workflow.ts`.
 
