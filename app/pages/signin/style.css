@@ -87,14 +87,10 @@
   color: var(--ink-soft);
 }
 
-.demo-login .pill {
+.demo-login .badge {
   grid-column: 2;
   grid-row: 1 / span 2;
   align-self: center;
-}
-
-.demo-foot {
-  justify-content: flex-start;
 }
 
 .demo-password {
