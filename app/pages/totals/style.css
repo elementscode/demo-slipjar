@@ -43,11 +43,6 @@
   font-weight: var(--weight-semibold);
 }
 
-.button.is-disabled {
-  pointer-events: none;
-  opacity: var(--opacity-disabled);
-}
-
 .tiles {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -82,48 +77,6 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-6);
   align-items: start;
-}
-
-.card-head p {
-  margin: var(--space-1) 0 0;
-  font-size: var(--text-sm);
-  color: var(--ink-soft);
-}
-
-.bars {
-  width: 100%;
-  margin: 0;
-  border-collapse: collapse;
-}
-
-.bars th,
-.bars td {
-  padding: var(--space-3) var(--space-5);
-  border: 0;
-  border-bottom: 1px solid var(--rule-soft);
-  vertical-align: middle;
-  background: transparent;
-}
-
-.bars tr:last-child td,
-.bars tr:last-child th {
-  border-bottom: 0;
-}
-
-.bars thead th {
-  padding-block: var(--space-2);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-medium);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--ink-dim);
-  text-align: start;
-}
-
-.bars .num {
-  text-align: end;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 
 .bars .label {
@@ -174,26 +127,8 @@
   color: var(--ink);
 }
 
-.bars tbody tr:hover {
-  background: var(--bg-soft);
-}
-
 .bars tbody tr:hover .bar-tip {
   display: block;
-}
-
-.bars tfoot td,
-.bars tfoot th {
-  border-top: 1px solid var(--rule);
-  border-bottom: 0;
-  font-weight: var(--weight-semibold);
-}
-
-.empty {
-  margin: 0;
-  padding: var(--space-8) var(--space-5);
-  text-align: center;
-  color: var(--ink-soft);
 }
 
 @media (max-width: 64rem) {
@@ -220,11 +155,6 @@
 
   .tile-note {
     grid-column: 1 / -1;
-  }
-
-  .bars th,
-  .bars td {
-    padding-inline: var(--space-3);
   }
 
   .bars .col-pending {

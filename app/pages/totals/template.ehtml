@@ -2,6 +2,10 @@ import "./style.css";
 import { sql } from "@elements/app";
 import type { Listener } from "@elements/app";
 import favicon from "#app/shared/assets/favicons/favicon.svg";
+import { Button } from "@elements/ui/button";
+import { Card } from "@elements/ui/card";
+import { Empty } from "@elements/ui/empty";
+import { Table, TableHead, TableCell } from "@elements/ui/table";
 import { Layout } from "#app/shared/templates/layout";
 import { CurrentUser, requireApprover } from "#app/shared/services/auth";
 import { ReportSummary } from "#app/shared/services/reports";
@@ -118,40 +122,42 @@ function onUpdate(state: { totals: Totals }) {
 }
 
 <BarTable (rows: TotalsRow[], first: string)>
-  <table class="bars">
-    <thead>
-      <tr>
-        <th scope="col">{first}</th>
-        <th scope="col" class="bar-cell"><span class="sr-only">Share</span></th>
-        <th scope="col" class="num">Approved</th>
-        <th scope="col" class="num col-pending">Pending</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr e:for={row of rows.map((r) => ({ ...r, id: r.key }))}>
-        <th scope="row" class="label">{row.label}</th>
-        <td class="bar-cell">
-          <div class="bar-track">
-            <div class={["bar", row.approvedCents === 0 && "is-zero"]} style={`width: ${barWidth(row, rows)}`}></div>
-            <div class="bar-tip" role="tooltip">
-              <strong>{row.label}</strong> · {formatMoney(row.approvedCents)} approved, {plural(row.expenseCount, "expense")}
-              {row.pendingCents > 0 ? ` · ${formatMoney(row.pendingCents)} pending` : ""}
+  <Table class="bars">
+    <table>
+      <thead>
+        <tr>
+          <TableHead>{first}</TableHead>
+          <TableHead class="bar-cell"><span class="sr-only">Share</span></TableHead>
+          <TableHead align="end">Approved</TableHead>
+          <TableHead align="end" class="col-pending">Pending</TableHead>
+        </tr>
+      </thead>
+      <tbody>
+        <tr e:for={row of rows.map((r) => ({ ...r, id: r.key }))}>
+          <TableHead scope="row" class="label">{row.label}</TableHead>
+          <TableCell class="bar-cell">
+            <div class="bar-track">
+              <div class={["bar", row.approvedCents === 0 && "is-zero"]} style={`width: ${barWidth(row, rows)}`}></div>
+              <div class="bar-tip" role="tooltip">
+                <strong>{row.label}</strong> · {formatMoney(row.approvedCents)} approved, {plural(row.expenseCount, "expense")}
+                {row.pendingCents > 0 ? ` · ${formatMoney(row.pendingCents)} pending` : ""}
+              </div>
             </div>
-          </div>
-        </td>
-        <td class="num">{formatMoney(row.approvedCents)}</td>
-        <td class="num pending col-pending">{row.pendingCents > 0 ? formatMoney(row.pendingCents) : "–"}</td>
-      </tr>
-    </tbody>
-    <tfoot>
-      <tr>
-        <th scope="row">Total</th>
-        <td class="bar-cell"></td>
-        <td class="num">{formatMoney(rows.reduce((sum, r) => sum + r.approvedCents, 0))}</td>
-        <td class="num pending col-pending">{formatMoney(rows.reduce((sum, r) => sum + r.pendingCents, 0))}</td>
-      </tr>
-    </tfoot>
-  </table>
+          </TableCell>
+          <TableCell align="end">{formatMoney(row.approvedCents)}</TableCell>
+          <TableCell align="end" class="pending col-pending">{row.pendingCents > 0 ? formatMoney(row.pendingCents) : "–"}</TableCell>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <TableHead scope="row">Total</TableHead>
+          <TableCell class="bar-cell"></TableCell>
+          <TableCell align="end">{formatMoney(rows.reduce((sum, r) => sum + r.approvedCents, 0))}</TableCell>
+          <TableCell align="end" class="pending col-pending">{formatMoney(rows.reduce((sum, r) => sum + r.pendingCents, 0))}</TableCell>
+        </tr>
+      </tfoot>
+    </table>
+  </Table>
 </BarTable>
 
 <html lang="en" class="page-totals" (
@@ -174,46 +180,40 @@ function onUpdate(state: { totals: Totals }) {
         </div>
 
         <nav class="month-nav row" aria-label="Month">
-          <a class="button is-sm" href={`/totals?month=${shiftMonth(state.totals.month, -1)}`} aria-label="Previous month">←</a>
+          <Button size="sm" href={`/totals?month=${shiftMonth(state.totals.month, -1)}`} label="Previous month">←</Button>
           <span class="month-name">{monthName(state.totals.month)}</span>
-          <a class={["button is-sm", state.totals.month >= currentMonth && "is-disabled"]}
-             href={`/totals?month=${shiftMonth(state.totals.month, 1)}`} aria-label="Next month">→</a>
+          <Button size="sm" disabled={state.totals.month >= currentMonth}
+                  href={`/totals?month=${shiftMonth(state.totals.month, 1)}`} label="Next month">→</Button>
         </nav>
       </div>
 
       <div class="tiles">
-        <div class="tile card">
+        <Card class="tile">
           <span class="tile-label">Approved</span>
           <span class="tile-value">{formatMoney(state.totals.approvedCents)}</span>
           <span class="tile-note">{plural(state.totals.approvedReports, "report")}</span>
-        </div>
-        <div class="tile card">
+        </Card>
+        <Card class="tile">
           <span class="tile-label">Awaiting approval</span>
           <span class="tile-value">{formatMoney(state.totals.pendingCents)}</span>
           <span class="tile-note">Counts once approved</span>
-        </div>
-        <div class="tile card">
+        </Card>
+        <Card class="tile">
           <span class="tile-label">Top category</span>
           <span class="tile-value">{state.totals.approvedCents > 0 ? state.totals.byCategory[0].label : "–"}</span>
           <span class="tile-note">{state.totals.approvedCents > 0 ? `${Math.round(state.totals.byCategory[0].approvedCents / state.totals.approvedCents * 100)}% of approved` : "Nothing approved yet"}</span>
-        </div>
+        </Card>
       </div>
 
       <div class="breakdowns">
-        <section class="card" aria-labelledby="category-title">
-          <div class="card-head">
-            <h2 id="category-title">By category</h2>
-          </div>
+        <Card title="By category" level={2} attrs={{ role: "region", "aria-label": "By category" }}>
           <BarTable rows={state.totals.byCategory} first="Category" />
-        </section>
+        </Card>
 
-        <section class="card" aria-labelledby="person-title">
-          <div class="card-head">
-            <h2 id="person-title">By person</h2>
-          </div>
-          <p e:if={state.totals.byPerson.length === 0} class="empty">No expenses submitted for this month.</p>
+        <Card title="By person" level={2} attrs={{ role: "region", "aria-label": "By person" }}>
+          <Empty e:if={state.totals.byPerson.length === 0} description="No expenses submitted for this month." />
           <BarTable e:else rows={state.totals.byPerson} first="Person" />
-        </section>
+        </Card>
       </div>
     </Layout>
   </body>
