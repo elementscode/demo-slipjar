@@ -166,109 +166,113 @@ function onDelete(view: ReportView) {
 
           <Alert e:if={view.error} variant="danger" description={view.error} />
 
-          <Card title="Expenses" level={2} attrs={{ role: "region", "aria-label": "Expenses" }}>
-            <CardContent e:if={view.detail.expenses.length === 0}>
-              <p class="hint">No expenses on this report yet.</p>
-            </CardContent>
+          <section aria-labelledby="lines-title">
+            <Card title="Expenses" level={2} titleId="lines-title">
+              <CardContent e:if={view.detail.expenses.length === 0}>
+                <p class="hint">No expenses on this report yet.</p>
+              </CardContent>
 
-            <ul e:else class="list">
-              <li e:for={e of view.detail.expenses}
-                  class={["line", selected(view)?.id === e.id && "is-selected"]}>
-                <button e:if={e.receiptUrl} class="line-thumb" aria-label={`Show the ${e.merchant} receipt`}
-                        onclick={() => view.selectedId = e.id}>
-                  <img src={e.receiptUrl} alt="" width="56" height="72">
-                </button>
-                <span e:else class="line-thumb"></span>
+              <ul e:else class="list">
+                <li e:for={e of view.detail.expenses}
+                    class={["line", selected(view)?.id === e.id && "is-selected"]}>
+                  <button e:if={e.receiptUrl} class="line-thumb" aria-label={`Show the ${e.merchant} receipt`}
+                          onclick={() => view.selectedId = e.id}>
+                    <img src={e.receiptUrl} alt="" width="56" height="72">
+                  </button>
+                  <span e:else class="line-thumb"></span>
 
-                <div class="line-text">
-                  <span class="line-merchant">{e.merchant}</span>
-                  <span class="line-meta">{formatDay(e.spentOn)} · {CATEGORY_LABELS[e.category]}</span>
-                  <span e:if={e.note} class="line-note">{e.note}</span>
-                </div>
-
-                <div class="line-end">
-                  <span class="money">{formatMoney(e.amountCents)}</span>
-                  <Button e:if={canEdit(user, view.detail.report)} variant="ghost" size="sm"
-                          disabled={view.busy} onclick={() => onDetach(view, e)}>Remove</Button>
-                </div>
-              </li>
-            </ul>
-
-            <div e:if={view.detail.expenses.length > 0} class="line-total">
-              <span>Total</span>
-              <span class="money">{formatMoney(view.detail.report.totalCents)}</span>
-            </div>
-
-            <CardFooter e:if={canEdit(user, view.detail.report)} class="owner-actions">
-              <Button e:if={view.detail.report.status === "draft"} variant="danger"
-                      disabled={view.busy} onclick={() => onDelete(view)}>Delete draft</Button>
-              <span e:else></span>
-              <Button variant="primary" disabled={view.busy || view.detail.expenses.length === 0}
-                      onclick={() => onSubmit(view)}>
-                {view.detail.report.status === "returned" ? "Resubmit for approval" : "Submit for approval"}
-              </Button>
-            </CardFooter>
-          </Card>
-
-          <Card e:if={canEdit(user, view.detail.report) && view.unfiled.length > 0} class="attach"
-                title="Add expenses to this report" level={2} attrs={{ role: "region", "aria-label": "Add expenses to this report" }}>
-            <CheckboxGroup value={view.picks}>
-            <ul class="list">
-              <li e:for={e of view.unfiled}>
-                <label class="line">
-                  <Checkbox value={e.id} />
-                  <span class="line-text">
+                  <div class="line-text">
                     <span class="line-merchant">{e.merchant}</span>
                     <span class="line-meta">{formatDay(e.spentOn)} · {CATEGORY_LABELS[e.category]}</span>
-                  </span>
-                  <span class="money">{formatMoney(e.amountCents)}</span>
-                </label>
-              </li>
-            </ul>
-            </CheckboxGroup>
+                    <span e:if={e.note} class="line-note">{e.note}</span>
+                  </div>
 
-            <CardFooter>
-              <Button disabled={view.busy || view.picks.length === 0} onclick={() => onAttach(view)}>
-                Add {view.picks.length > 0 ? plural(view.picks.length, "expense") : "selected"}
-              </Button>
-            </CardFooter>
-          </Card>
+                  <div class="line-end">
+                    <span class="money">{formatMoney(e.amountCents)}</span>
+                    <Button e:if={canEdit(user, view.detail.report)} variant="ghost" size="sm"
+                            disabled={view.busy} onclick={() => onDetach(view, e)}>Remove</Button>
+                  </div>
+                </li>
+              </ul>
+
+              <div e:if={view.detail.expenses.length > 0} class="line-total">
+                <span>Total</span>
+                <span class="money">{formatMoney(view.detail.report.totalCents)}</span>
+              </div>
+
+              <CardFooter e:if={canEdit(user, view.detail.report)} class="owner-actions">
+                <Button e:if={view.detail.report.status === "draft"} variant="danger"
+                        disabled={view.busy} onclick={() => onDelete(view)}>Delete draft</Button>
+                <span e:else></span>
+                <Button variant="primary" disabled={view.busy || view.detail.expenses.length === 0}
+                        onclick={() => onSubmit(view)}>
+                  {view.detail.report.status === "returned" ? "Resubmit for approval" : "Submit for approval"}
+                </Button>
+              </CardFooter>
+            </Card>
+          </section>
+
+          <section e:if={canEdit(user, view.detail.report) && view.unfiled.length > 0} aria-labelledby="attach-title">
+            <Card class="attach" title="Add expenses to this report" level={2} titleId="attach-title">
+              <CheckboxGroup value={view.picks}>
+                <ul class="list">
+                  <li e:for={e of view.unfiled}>
+                    <label class="line">
+                      <Checkbox value={e.id} />
+                      <span class="line-text">
+                        <span class="line-merchant">{e.merchant}</span>
+                        <span class="line-meta">{formatDay(e.spentOn)} · {CATEGORY_LABELS[e.category]}</span>
+                      </span>
+                      <span class="money">{formatMoney(e.amountCents)}</span>
+                    </label>
+                  </li>
+                </ul>
+              </CheckboxGroup>
+
+              <CardFooter>
+                <Button disabled={view.busy || view.picks.length === 0} onclick={() => onAttach(view)}>
+                  Add {view.picks.length > 0 ? plural(view.picks.length, "expense") : "selected"}
+                </Button>
+              </CardFooter>
+            </Card>
+          </section>
         </div>
 
         <aside class="report-side stack is-lg">
-          <Card e:if={canDecide(user, view.detail.report)} class="decision" title="Your decision" level={2}
-                attrs={{ role: "region", "aria-label": "Your decision" }}>
-            <CardContent class="stack">
-              <Field label="Comment" reserveError={false}>
-                <Textarea value={view.comment} placeholder="Required when sending back. Optional when approving." />
-              </Field>
+          <section e:if={canDecide(user, view.detail.report)} aria-labelledby="decide-title">
+            <Card class="decision" title="Your decision" level={2} titleId="decide-title">
+              <CardContent class="stack">
+                <Field label="Comment" reserveError={false}>
+                  <Textarea value={view.comment} placeholder="Required when sending back. Optional when approving." />
+                </Field>
 
-              <div class="decision-actions">
-                <Button variant="danger" disabled={view.busy} onclick={() => onDecide(view, "returned")}>Send back</Button>
-                <Button variant="primary" disabled={view.busy} onclick={() => onDecide(view, "approved")}>Approve</Button>
-              </div>
-            </CardContent>
-          </Card>
+                <div class="decision-actions">
+                  <Button variant="danger" disabled={view.busy} onclick={() => onDecide(view, "returned")}>Send back</Button>
+                  <Button variant="primary" disabled={view.busy} onclick={() => onDecide(view, "approved")}>Approve</Button>
+                </div>
+              </CardContent>
+            </Card>
+          </section>
 
-          <Card e:if={selected(view)} title="Receipt" level={2} attrs={{ role: "region", "aria-label": "Receipt" }}>
+          <section e:if={selected(view)} aria-labelledby="viewer-title">
+            <Card title="Receipt" level={2} titleId="viewer-title">
+              <a e:if={selected(view)?.receiptUrl} class="viewer" href={selected(view)?.receiptUrl} target="_blank" rel="noopener">
+                <img src={selected(view)?.receiptUrl} alt={`Receipt from ${selected(view)?.merchant}`} width="320" height="520">
+              </a>
+              <CardContent e:else>
+                <p class="hint">No receipt image.</p>
+              </CardContent>
 
-            <a e:if={selected(view)?.receiptUrl} class="viewer" href={selected(view)?.receiptUrl} target="_blank" rel="noopener">
-              <img src={selected(view)?.receiptUrl} alt={`Receipt from ${selected(view)?.merchant}`} width="320" height="520">
-            </a>
-            <CardContent e:else>
-              <p class="hint">No receipt image.</p>
-            </CardContent>
-
-            <CardFooter class="viewer-caption">
-              <span>{selected(view)?.merchant}</span>
-              <span class="money">{formatMoney(selected(view)?.amountCents ?? 0)}</span>
-            </CardFooter>
-          </Card>
-
+              <CardFooter class="viewer-caption">
+                <span>{selected(view)?.merchant}</span>
+                <span class="money">{formatMoney(selected(view)?.amountCents ?? 0)}</span>
+              </CardFooter>
+            </Card>
+          </section>
         </aside>
 
-        <div class="report-history">
-          <Card title="History" level={2} attrs={{ role: "region", "aria-label": "History" }}>
+        <section class="report-history" aria-labelledby="history-title">
+          <Card title="History" level={2} titleId="history-title">
             <CardContent>
               <p e:if={view.detail.events.length === 0} class="hint">Not submitted yet. Started {formatWhen(view.detail.report.createdAt)}.</p>
 
@@ -284,7 +288,7 @@ function onDelete(view: ReportView) {
               </ol>
             </CardContent>
           </Card>
-        </div>
+        </section>
       </div>
     </Layout>
   </body>

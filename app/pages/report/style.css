@@ -252,22 +252,6 @@
   grid-template-columns: auto minmax(0, 1fr) auto;
 }
 
-@keyframes land {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-.callout {
-  animation: land 240ms var(--ease-out);
-}
-
 @media (max-width: 60rem) {
   .report-layout {
     grid-template-columns: minmax(0, 1fr);
@@ -277,7 +261,6 @@
       "side"
       "history";
   }
-
 }
 
 @media (max-width: 48rem) {
