@@ -79,52 +79,56 @@ function totalCents(reports: ReportSummary[]): number {
       </div>
 
       <div class="stack is-xl">
-        <Card attrs={{ role: "region", "aria-label": "Waiting for a decision" }}>
-          <CardHeader>
-            <CardTitle level={2}>Waiting for a decision<span class="count">{state.waiting.length}</span></CardTitle>
-          </CardHeader>
+        <section aria-labelledby="waiting-title">
+          <Card>
+            <CardHeader>
+              <CardTitle level={2} id="waiting-title">Waiting for a decision<span class="count">{state.waiting.length}</span></CardTitle>
+            </CardHeader>
 
-          <Empty e:if={state.waiting.length === 0} description="Nothing waiting. You're all caught up." />
+            <Empty e:if={state.waiting.length === 0} description="Nothing waiting. You're all caught up." />
 
-          <ul e:else class="list">
-            <li e:for={r of state.waiting} class={[state.newId === r.id && "is-new"]}>
-              <a class="queue-row" href={`/reports/${r.id}`}>
-                <Avatar alt={r.ownerName} attrs={{ "aria-hidden": "true" }} />
-                <div class="queue-text">
-                  <span class="queue-title truncate">{r.title}</span>
-                  <span class="queue-meta">
-                    {r.ownerName} · {plural(r.expenseCount, "expense")}{r.userId === user.id ? " · yours, another approver decides" : ""}
-                  </span>
-                </div>
-                <span class={["queue-age", waitingDays(r) >= 3 && "is-old"]}>{waitingLabel(r)}</span>
-                <div class="queue-end">
-                  <span class="money">{formatMoney(r.totalCents)}</span>
-                  <span class="link-action">{r.userId === user.id ? "View" : "Review"} →</span>
-                </div>
-              </a>
-            </li>
-          </ul>
-        </Card>
+            <ul e:else class="list">
+              <li e:for={r of state.waiting} class={[state.newId === r.id && "is-new"]}>
+                <a class="queue-row" href={`/reports/${r.id}`}>
+                  <Avatar alt={r.ownerName} attrs={{ "aria-hidden": "true" }} />
+                  <div class="queue-text">
+                    <span class="queue-title truncate">{r.title}</span>
+                    <span class="queue-meta">
+                      {r.ownerName} · {plural(r.expenseCount, "expense")}{r.userId === user.id ? " · yours, another approver decides" : ""}
+                    </span>
+                  </div>
+                  <span class={["queue-age", waitingDays(r) >= 3 && "is-old"]}>{waitingLabel(r)}</span>
+                  <div class="queue-end">
+                    <span class="money">{formatMoney(r.totalCents)}</span>
+                    <span class="link-action">{r.userId === user.id ? "View" : "Review"} →</span>
+                  </div>
+                </a>
+              </li>
+            </ul>
+          </Card>
+        </section>
 
-        <Card title="Recently decided" level={2} attrs={{ role: "region", "aria-label": "Recently decided" }}>
-          <Empty e:if={state.decided.length === 0} description="No decisions yet." />
+        <section aria-labelledby="decided-title">
+          <Card title="Recently decided" level={2} titleId="decided-title">
+            <Empty e:if={state.decided.length === 0} description="No decisions yet." />
 
-          <ul e:else class="list">
-            <li e:for={r of state.decided} class={[state.newId === r.id && "is-new"]}>
-              <a class="queue-row" href={`/reports/${r.id}`}>
-                <Avatar alt={r.ownerName} attrs={{ "aria-hidden": "true" }} />
-                <div class="queue-text">
-                  <span class="queue-title truncate">{r.title}</span>
-                  <span class="queue-meta">{r.ownerName} · {r.deciderName} on {formatWhen(r.decidedAt)}</span>
-                </div>
-                <Badge variant={statusVariant(r.status)} dot class="queue-status">{STATUS_LABELS[r.status]}</Badge>
-                <div class="queue-end">
-                  <span class="money">{formatMoney(r.totalCents)}</span>
-                </div>
-              </a>
-            </li>
-          </ul>
-        </Card>
+            <ul e:else class="list">
+              <li e:for={r of state.decided} class={[state.newId === r.id && "is-new"]}>
+                <a class="queue-row" href={`/reports/${r.id}`}>
+                  <Avatar alt={r.ownerName} attrs={{ "aria-hidden": "true" }} />
+                  <div class="queue-text">
+                    <span class="queue-title truncate">{r.title}</span>
+                    <span class="queue-meta">{r.ownerName} · {r.deciderName} on {formatWhen(r.decidedAt)}</span>
+                  </div>
+                  <Badge variant={statusVariant(r.status)} dot class="queue-status">{STATUS_LABELS[r.status]}</Badge>
+                  <div class="queue-end">
+                    <span class="money">{formatMoney(r.totalCents)}</span>
+                  </div>
+                </a>
+              </li>
+            </ul>
+          </Card>
+        </section>
       </div>
     </Layout>
   </body>

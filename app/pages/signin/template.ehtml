@@ -65,35 +65,37 @@ function onPick(form: SigninForm, login: DemoLogin) {
           <div class="stack">
             <Field label="Work email" reserveError={false}>
               <Input type="email" name="email" value={form.email} placeholder="you@company.com" required
-                     attrs={{ id: "email", autocomplete: "email", autocapitalize: "none", spellcheck: "false" }} />
+                     attrs={{ autocomplete: "email", autocapitalize: "none", spellcheck: "false" }} />
             </Field>
 
             <Field label="Password" reserveError={false}>
               <Input type="password" name="password" value={form.password} required
-                     attrs={{ id: "password", autocomplete: "current-password" }} />
+                     attrs={{ autocomplete: "current-password" }} />
             </Field>
           </div>
 
           <Button type="submit" variant="primary" block>Sign in</Button>
         </form>
 
-        <Card e:if={demoLogins.length > 0} title="Demo accounts" level={2} attrs={{ role: "region", "aria-label": "Demo accounts" }}>
+        <section e:if={demoLogins.length > 0} aria-labelledby="demo-title">
+          <Card title="Demo accounts" level={2} titleId="demo-title">
 
-          <ul class="demo-list">
-            <li e:for={login of demoLogins}>
-              <button type="button" class="demo-login" onclick={() => onPick(form, login)}>
-                <span class="demo-name">{login.name}</span>
-                <span class="demo-email">{login.email}</span>
-                <Badge e:if={login.role === "approver"} variant="accent">Approver</Badge>
-                <Badge e:else variant="secondary">Employee</Badge>
-              </button>
-            </li>
-          </ul>
+            <ul class="demo-list">
+              <li e:for={login of demoLogins}>
+                <button type="button" class="demo-login" onclick={() => onPick(form, login)}>
+                  <span class="demo-name">{login.name}</span>
+                  <span class="demo-email">{login.email}</span>
+                  <Badge e:if={login.role === "approver"} variant="accent">Approver</Badge>
+                  <Badge e:else variant="secondary">Employee</Badge>
+                </button>
+              </li>
+            </ul>
 
-          <CardFooter align="start">
-            <p class="demo-password">Click one to sign in. Every password is <code>{DEMO_PASSWORD}</code>.</p>
-          </CardFooter>
-        </Card>
+            <CardFooter align="start">
+              <p class="demo-password">Click one to sign in. Every password is <code>{DEMO_PASSWORD}</code>.</p>
+            </CardFooter>
+          </Card>
+        </section>
       </div>
     </main>
   </body>

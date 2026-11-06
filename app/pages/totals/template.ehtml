@@ -206,14 +206,18 @@ function onUpdate(state: { totals: Totals }) {
       </div>
 
       <div class="breakdowns">
-        <Card title="By category" level={2} attrs={{ role: "region", "aria-label": "By category" }}>
-          <BarTable rows={state.totals.byCategory} first="Category" />
-        </Card>
+        <section aria-labelledby="category-title">
+          <Card title="By category" level={2} titleId="category-title">
+            <BarTable rows={state.totals.byCategory} first="Category" />
+          </Card>
+        </section>
 
-        <Card title="By person" level={2} attrs={{ role: "region", "aria-label": "By person" }}>
-          <Empty e:if={state.totals.byPerson.length === 0} description="No expenses submitted for this month." />
-          <BarTable e:else rows={state.totals.byPerson} first="Person" />
-        </Card>
+        <section aria-labelledby="person-title">
+          <Card title="By person" level={2} titleId="person-title">
+            <Empty e:if={state.totals.byPerson.length === 0} description="No expenses submitted for this month." />
+            <BarTable e:else rows={state.totals.byPerson} first="Person" />
+          </Card>
+        </section>
       </div>
     </Layout>
   </body>
