@@ -6,6 +6,8 @@
 
 Expenses with receipt photos, reports that approvers approve or send back with a comment, monthly totals, and email, all live.
 
+Slipjar uses the `default` theme from @elements/ui.
+
 [Run this app on your machine](https://elements.dev/demos/01a0f3fa-0bc6-7b70-8739-3a0d9aa1467b). Use this demo as inspiration, or as the starting point for your own app. Your agent creates a new app with this one as the scaffold, and you prompt it to add whatever features you want.
 
 ## How it's built
