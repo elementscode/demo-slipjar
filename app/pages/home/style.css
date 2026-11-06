@@ -206,30 +206,6 @@
   gap: var(--space-3);
 }
 
-.receipt-pick input[type="file"] {
-  height: auto;
-  padding: var(--space-2);
-  font-size: var(--text-sm);
-  color: var(--ink-soft);
-  cursor: pointer;
-}
-
-.receipt-pick input[type="file"]::file-selector-button {
-  margin-inline-end: var(--space-3);
-  padding: var(--space-1) var(--space-3);
-  border: 1px solid var(--rule-strong);
-  border-radius: var(--radius-sm);
-  background: var(--bg-soft);
-  font: inherit;
-  font-weight: var(--weight-medium);
-  color: var(--ink);
-  cursor: pointer;
-}
-
-.receipt-pick input[type="file"]::file-selector-button:hover {
-  background: var(--bg-muted);
-}
-
 @keyframes row-flash {
   from {
     background: var(--accent-soft);

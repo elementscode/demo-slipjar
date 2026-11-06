@@ -1,6 +1,6 @@
 import "./style.css";
 import { redirect, ValidationError } from "@elements/app";
-import type { Listener } from "@elements/app";
+import type { File, Listener } from "@elements/app";
 import favicon from "#app/shared/assets/favicons/favicon.svg";
 import { Alert } from "@elements/ui/alert";
 import { Badge } from "@elements/ui/badge";
@@ -39,10 +39,8 @@ interface AddState {
   form: ExpenseForm;
   errors: ExpenseErrors;
   error: string;
+  receipt: File[];
   busy: boolean;
-  // Setting a single-file input's bound value back to null leaves the old
-  // filename showing, so a fresh key swaps in a new, empty input.
-  picker: { id: string }[];
 }
 
 interface GroupState {
@@ -71,9 +69,9 @@ function onAdd(add: AddState, state: HomeState) {
   add.busy = true;
 
   try {
-    state.unfiled = addExpense(add.form);
+    state.unfiled = addExpense({ ...add.form, receipt: add.receipt[0] ?? null });
     add.form = blankExpense(add.form.spentOn);
-    add.picker = [{ id: String(Date.now()) }];
+    add.receipt = [];
     add.errors = {};
     add.error = "";
   } catch (err: any) {
@@ -137,7 +135,7 @@ function reportMeta(report: ReportSummary): string {
   initial: HomeState,
   updates: Listener<ReportSummary>,
   private state: HomeState = initial,
-  private add: AddState = { form: blankExpense(today), errors: {}, error: "", busy: false, picker: [{ id: "receipt" }] },
+  private add: AddState = { form: blankExpense(today), errors: {}, error: "", receipt: [], busy: false },
   private group: GroupState = { ids: [], title: "", error: "" },
 ) oninit={() => updates.on("notify", (report) => onReportUpdate(state, report))}>
   <head>
@@ -165,112 +163,118 @@ function reportMeta(report: ReportSummary): string {
       </div>
 
       <div class="home-grid">
-        <Card class="home-add" attrs={{ role: "region", "aria-label": "Add an expense" }}>
-          <CardHeader>
-            <CardTitle level={2}>Add an expense</CardTitle>
-          </CardHeader>
+        <section class="home-add" aria-labelledby="add-title">
+          <Card>
+            <CardHeader>
+              <CardTitle level={2} id="add-title">Add an expense</CardTitle>
+            </CardHeader>
 
-          <form class="add-form card-body stack" onsubmit={() => onAdd(add, state)}>
-            <Alert e:if={add.error} variant="danger" description={add.error} />
+            <form class="add-form card-body stack" onsubmit={() => onAdd(add, state)}>
+              <Alert e:if={add.error} variant="danger" description={add.error} />
 
-            <div class="amount-row">
-              <Field label="Date" error={add.errors.spentOn?.[0] ?? ""} reserveError={false}>
-                <DatePicker value={add.form.spentOn} max={today} block format={{ dateStyle: "medium" }}
-                            invalid={!!add.errors.spentOn} required />
+              <div class="amount-row">
+                <Field label="Date" error={add.errors.spentOn?.[0] ?? ""} reserveError={false}>
+                  <DatePicker value={add.form.spentOn} max={today} block format={{ dateStyle: "medium" }}
+                              invalid={!!add.errors.spentOn} required />
+                </Field>
+
+                <Field label="Amount" error={add.errors.amount?.[0] ?? ""} reserveError={false}>
+                  <Input value={add.form.amount} placeholder="0.00" invalid={!!add.errors.amount}
+                         attrs={{ inputmode: "decimal", autocomplete: "off" }} required />
+                </Field>
+              </div>
+
+              <Field label="Merchant" error={add.errors.merchant?.[0] ?? ""} reserveError={false}>
+                <Input value={add.form.merchant} placeholder="Where you paid" invalid={!!add.errors.merchant}
+                       attrs={{ autocomplete: "off" }} required />
               </Field>
 
-              <Field label="Amount" error={add.errors.amount?.[0] ?? ""} reserveError={false}>
-                <Input value={add.form.amount} placeholder="0.00" invalid={!!add.errors.amount}
-                       attrs={{ inputmode: "decimal", autocomplete: "off" }} required />
+              <Field label="Category" reserveError={false}>
+                <NativeSelect value={add.form.category} options={CATEGORY_OPTIONS} block />
               </Field>
-            </div>
 
-            <Field label="Merchant" error={add.errors.merchant?.[0] ?? ""} reserveError={false}>
-              <Input value={add.form.merchant} placeholder="Where you paid" invalid={!!add.errors.merchant}
-                     attrs={{ autocomplete: "off" }} required />
-            </Field>
+              <Field label="Note" reserveError={false}>
+                <Textarea value={add.form.note} rows={2} placeholder="Who was there, what it was for" />
+              </Field>
 
-            <Field label="Category" reserveError={false}>
-              <NativeSelect value={add.form.category} options={CATEGORY_OPTIONS} block />
-            </Field>
+              <Field label="Receipt photo" description="JPEG, PNG or WebP, up to 8 MB."
+                     error={add.errors.receipt?.[0] ?? ""} reserveError={false}>
+                <Input type="file" files={add.receipt} invalid={!!add.errors.receipt}
+                       attrs={{ accept: "image/png,image/jpeg,image/webp,image/gif" }} />
+              </Field>
 
-            <Field label="Note" reserveError={false}>
-              <Textarea value={add.form.note} rows={2} placeholder="Who was there, what it was for" />
-            </Field>
+              <Button type="submit" variant="primary" block loading={add.busy}>Add expense</Button>
+            </form>
+          </Card>
+        </section>
 
-            <Field class="receipt-pick" label="Receipt photo" description="JPEG, PNG or WebP, up to 8 MB."
-                   error={add.errors.receipt?.[0] ?? ""} reserveError={false}>
-              <input e:for={slot of add.picker} type="file" accept="image/png,image/jpeg,image/webp,image/gif"
-                     value={add.form.receipt} class={[add.errors.receipt && "is-error"]}>
-            </Field>
+        <section class="home-unfiled" aria-labelledby="unfiled-title">
+          <Card>
+            <CardHeader>
+              <CardTitle level={2} id="unfiled-title">Not on a report yet<span class="count">{state.unfiled.length}</span></CardTitle>
+            </CardHeader>
 
-            <Button type="submit" variant="primary" block loading={add.busy}>Add expense</Button>
-          </form>
-        </Card>
+            <Empty e:if={state.unfiled.length === 0} description="Every expense is on a report. New ones land here." />
 
-        <Card class="home-unfiled" attrs={{ role: "region", "aria-label": "Not on a report yet" }}>
-          <CardHeader>
-            <CardTitle level={2}>Not on a report yet<span class="count">{state.unfiled.length}</span></CardTitle>
-          </CardHeader>
+            <CheckboxGroup e:else value={group.ids}>
+              <ul class="list">
+                <li e:for={e of state.unfiled} class={["expense-row", group.ids.includes(e.id) && "is-picked"]}>
+                  <label class="expense-pick"><Checkbox value={e.id} attrs={{ "aria-label": `Select ${e.merchant}` }} /></label>
+                  <a e:if={e.receiptUrl} href={e.receiptUrl} target="_blank" rel="noopener">
+                    <img class="thumb" src={e.receiptUrl} alt={`Receipt from ${e.merchant}`} width="40" height="40">
+                  </a>
+                  <span e:else class="thumb"></span>
+                  <div class="expense-text">
+                    <span class="expense-merchant truncate">{e.merchant}</span>
+                    <span class="expense-meta truncate">{formatDay(e.spentOn)} · {CATEGORY_LABELS[e.category]}{e.note ? ` · ${e.note}` : ""}</span>
+                  </div>
+                  <span class="money">{formatMoney(e.amountCents)}</span>
+                  <Button class="remove" variant="ghost" size="sm" icon label={`Delete ${e.merchant}`}
+                          onclick={() => onDelete(state, group, e)}>
+                    <Icon name="x" />
+                  </Button>
+                </li>
+              </ul>
+            </CheckboxGroup>
 
-          <Empty e:if={state.unfiled.length === 0} description="Every expense is on a report. New ones land here." />
+            <CardFooter e:if={state.unfiled.length > 0}>
+              <form class="group-form" onsubmit={() => onGroup(group)}>
+                <Input value={group.title} placeholder={group.ids.length === 0 ? "Select expenses, then name the report" : `Name this report (${plural(group.ids.length, "expense")}, ${formatMoney(pickedCents(state.unfiled, group.ids))})`}
+                       attrs={{ "aria-label": "Report name" }} />
+                <Button type="submit" variant="primary" disabled={group.ids.length === 0 || !group.title.trim()}>Create report</Button>
+              </form>
+              <Alert e:if={group.error} variant="danger" class="group-error" description={group.error} />
+            </CardFooter>
+          </Card>
+        </section>
 
-          <CheckboxGroup e:else value={group.ids}>
-            <ul class="list">
-              <li e:for={e of state.unfiled} class={["expense-row", group.ids.includes(e.id) && "is-picked"]}>
-                <label class="expense-pick"><Checkbox value={e.id} attrs={{ "aria-label": `Select ${e.merchant}` }} /></label>
-                <a e:if={e.receiptUrl} href={e.receiptUrl} target="_blank" rel="noopener">
-                  <img class="thumb" src={e.receiptUrl} alt={`Receipt from ${e.merchant}`} width="40" height="40">
+        <section class="home-reports" aria-labelledby="reports-title">
+          <Card>
+            <CardHeader>
+              <CardTitle level={2} id="reports-title">Reports<span class="count">{state.reports.length}</span></CardTitle>
+            </CardHeader>
+
+            <Empty e:if={state.reports.length === 0} description="No reports yet. Select expenses above to start one." />
+
+            <ul e:else class="list">
+              <li e:for={r of state.reports} class={[state.flashId === r.id && "is-flash"]}>
+                <a class="report-row" href={`/reports/${r.id}`}>
+                  <div class="stack is-xs">
+                    <span class="report-title">{r.title}</span>
+                    <span class="report-meta">{reportMeta(r)}</span>
+                  </div>
+                  <div class="report-side">
+                    <span class="money">{formatMoney(r.totalCents)}</span>
+                    <Badge variant={statusVariant(r.status)} dot>{STATUS_LABELS[r.status]}</Badge>
+                  </div>
+                  <p e:if={r.decisionComment} class={["report-comment", r.status === "approved" && "is-approved"]}>
+                    “{r.decisionComment}” <cite>{r.deciderName}</cite>
+                  </p>
                 </a>
-                <span e:else class="thumb"></span>
-                <div class="expense-text">
-                  <span class="expense-merchant truncate">{e.merchant}</span>
-                  <span class="expense-meta truncate">{formatDay(e.spentOn)} · {CATEGORY_LABELS[e.category]}{e.note ? ` · ${e.note}` : ""}</span>
-                </div>
-                <span class="money">{formatMoney(e.amountCents)}</span>
-                <Button class="remove" variant="ghost" size="sm" icon label={`Delete ${e.merchant}`}
-                        onclick={() => onDelete(state, group, e)}>
-                  <Icon name="x" />
-                </Button>
               </li>
             </ul>
-          </CheckboxGroup>
-
-          <CardFooter e:if={state.unfiled.length > 0}>
-            <form class="group-form" onsubmit={() => onGroup(group)}>
-              <Input value={group.title} placeholder={group.ids.length === 0 ? "Select expenses, then name the report" : `Name this report (${plural(group.ids.length, "expense")}, ${formatMoney(pickedCents(state.unfiled, group.ids))})`}
-                     attrs={{ "aria-label": "Report name" }} />
-              <Button type="submit" variant="primary" disabled={group.ids.length === 0 || !group.title.trim()}>Create report</Button>
-            </form>
-            <Alert e:if={group.error} variant="danger" class="group-error" description={group.error} />
-          </CardFooter>
-        </Card>
-
-        <Card class="home-reports" attrs={{ role: "region", "aria-label": "Reports" }}>
-          <CardHeader>
-            <CardTitle level={2}>Reports<span class="count">{state.reports.length}</span></CardTitle>
-          </CardHeader>
-
-          <Empty e:if={state.reports.length === 0} description="No reports yet. Select expenses above to start one." />
-
-          <ul e:else class="list">
-            <li e:for={r of state.reports} class={[state.flashId === r.id && "is-flash"]}>
-              <a class="report-row" href={`/reports/${r.id}`}>
-                <div class="stack is-xs">
-                  <span class="report-title">{r.title}</span>
-                  <span class="report-meta">{reportMeta(r)}</span>
-                </div>
-                <div class="report-side">
-                  <span class="money">{formatMoney(r.totalCents)}</span>
-                  <Badge variant={statusVariant(r.status)} dot>{STATUS_LABELS[r.status]}</Badge>
-                </div>
-                <p e:if={r.decisionComment} class={["report-comment", r.status === "approved" && "is-approved"]}>
-                  “{r.decisionComment}” <cite>{r.deciderName}</cite>
-                </p>
-              </a>
-            </li>
-          </ul>
-        </Card>
+          </Card>
+        </section>
       </div>
     </Layout>
   </body>
