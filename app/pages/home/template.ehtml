@@ -2,6 +2,7 @@ import "./style.css";
 import { redirect, ValidationError } from "@elements/app";
 import type { Listener } from "@elements/app";
 import favicon from "#app/shared/assets/favicons/favicon.svg";
+import { Badge } from "@elements/ui/badge";
 import { Layout } from "#app/shared/templates/layout";
 import { CurrentUser } from "#app/shared/services/auth";
 import { ReportSummary, Expense } from "#app/shared/services/reports";
@@ -10,7 +11,7 @@ import {
   CATEGORIES,
   CATEGORY_LABELS,
   STATUS_LABELS,
-  statusPill,
+  statusVariant,
   formatMoney,
   formatDay,
   formatWhen,
@@ -262,7 +263,7 @@ function reportMeta(report: ReportSummary): string {
                 </div>
                 <div class="report-side">
                   <span class="money">{formatMoney(r.totalCents)}</span>
-                  <span class={statusPill(r.status)}><span class="pill-dot"></span>{STATUS_LABELS[r.status]}</span>
+                  <Badge variant={statusVariant(r.status)} dot>{STATUS_LABELS[r.status]}</Badge>
                 </div>
                 <p e:if={r.decisionComment} class={["report-comment", r.status === "approved" && "is-approved"]}>
                   “{r.decisionComment}” <cite>{r.deciderName}</cite>

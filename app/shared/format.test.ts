@@ -1,5 +1,5 @@
 import { test, equal } from "@elements/app";
-import { parseAmount, formatMoney, formatDay, statusPill } from "#app/shared/format";
+import { parseAmount, formatMoney, formatDay, statusVariant } from "#app/shared/format";
 
 test("format", () => {
   test("parseAmount reads what people type", () => {
@@ -21,8 +21,8 @@ test("format", () => {
     equal(formatDay("2026-09-01"), "Sep 1, 2026");
   });
 
-  test("statusPill", () => {
-    equal(statusPill("approved"), "pill is-success");
-    equal(statusPill("draft"), "pill");
+  test("statusVariant", () => {
+    equal(statusVariant("approved"), "success");
+    equal(statusVariant("draft"), "secondary");
   });
 });

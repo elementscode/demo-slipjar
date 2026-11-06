@@ -2,6 +2,7 @@ import "./style.css";
 import { redirect } from "@elements/app";
 import type { Listener } from "@elements/app";
 import favicon from "#app/shared/assets/favicons/favicon.svg";
+import { Badge } from "@elements/ui/badge";
 import { Layout } from "#app/shared/templates/layout";
 import { CurrentUser } from "#app/shared/services/auth";
 import { ReportDetail, ReportSummary, Expense } from "#app/shared/services/reports";
@@ -18,7 +19,7 @@ import { canEdit, canDecide } from "#app/shared/permissions";
 import {
   CATEGORY_LABELS,
   STATUS_LABELS,
-  statusPill,
+  statusVariant,
   formatMoney,
   formatDay,
   formatWhen,
@@ -142,7 +143,7 @@ function onDelete(view: ReportView) {
         </div>
 
         <div class="report-total">
-          <span class={statusPill(view.detail.report.status)}><span class="pill-dot"></span>{STATUS_LABELS[view.detail.report.status]}</span>
+          <Badge variant={statusVariant(view.detail.report.status)} dot>{STATUS_LABELS[view.detail.report.status]}</Badge>
           <span class="money">{formatMoney(view.detail.report.totalCents)}</span>
         </div>
       </div>

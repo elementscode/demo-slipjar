@@ -4,7 +4,11 @@ import favicon from "#app/shared/assets/favicons/favicon.svg";
 import { Layout } from "#app/shared/templates/layout";
 import { CurrentUser } from "#app/shared/services/auth";
 import { ReportSummary } from "#app/shared/services/reports";
-import { STATUS_LABELS, statusPill, formatMoney, formatWhen, plural } from "#app/shared/format";
+import { Avatar } from "@elements/ui/avatar";
+import { Badge } from "@elements/ui/badge";
+import { Card, CardHeader, CardTitle } from "@elements/ui/card";
+import { Empty } from "@elements/ui/empty";
+import { STATUS_LABELS, statusVariant, formatMoney, formatWhen, plural } from "#app/shared/format";
 
 export interface QueueState {
   waiting: ReportSummary[];
@@ -28,10 +32,6 @@ function onUpdate(state: QueueState, report: ReportSummary) {
   }
 
   state.newId = report.id;
-}
-
-function initials(name: string): string {
-  return name.split(/\s+/).map((part) => part[0] ?? "").join("").slice(0, 2).toUpperCase();
 }
 
 function waitingDays(report: ReportSummary): number {
@@ -79,17 +79,17 @@ function totalCents(reports: ReportSummary[]): number {
       </div>
 
       <div class="stack is-xl">
-        <section class="card" aria-labelledby="waiting-title">
-          <div class="card-head">
-            <h2 id="waiting-title">Waiting for a decision<span class="count">{state.waiting.length}</span></h2>
-          </div>
+        <Card attrs={{ role: "region", "aria-label": "Waiting for a decision" }}>
+          <CardHeader>
+            <CardTitle level={2}>Waiting for a decision<span class="count">{state.waiting.length}</span></CardTitle>
+          </CardHeader>
 
-          <p e:if={state.waiting.length === 0} class="empty">Nothing waiting. You're all caught up.</p>
+          <Empty e:if={state.waiting.length === 0} description="Nothing waiting. You're all caught up." />
 
           <ul e:else class="list">
             <li e:for={r of state.waiting} class={[state.newId === r.id && "is-new"]}>
               <a class="queue-row" href={`/reports/${r.id}`}>
-                <span class="avatar-initials" aria-hidden="true">{initials(r.ownerName)}</span>
+                <Avatar alt={r.ownerName} attrs={{ "aria-hidden": "true" }} />
                 <div class="queue-text">
                   <span class="queue-title truncate">{r.title}</span>
                   <span class="queue-meta">
@@ -104,31 +104,27 @@ function totalCents(reports: ReportSummary[]): number {
               </a>
             </li>
           </ul>
-        </section>
+        </Card>
 
-        <section class="card" aria-labelledby="decided-title">
-          <div class="card-head">
-            <h2 id="decided-title">Recently decided</h2>
-          </div>
-
-          <p e:if={state.decided.length === 0} class="empty">No decisions yet.</p>
+        <Card title="Recently decided" level={2} attrs={{ role: "region", "aria-label": "Recently decided" }}>
+          <Empty e:if={state.decided.length === 0} description="No decisions yet." />
 
           <ul e:else class="list">
             <li e:for={r of state.decided} class={[state.newId === r.id && "is-new"]}>
               <a class="queue-row" href={`/reports/${r.id}`}>
-                <span class="avatar-initials" aria-hidden="true">{initials(r.ownerName)}</span>
+                <Avatar alt={r.ownerName} attrs={{ "aria-hidden": "true" }} />
                 <div class="queue-text">
                   <span class="queue-title truncate">{r.title}</span>
                   <span class="queue-meta">{r.ownerName} · {r.deciderName} on {formatWhen(r.decidedAt)}</span>
                 </div>
-                <span class={[statusPill(r.status), "queue-status"]}><span class="pill-dot"></span>{STATUS_LABELS[r.status]}</span>
+                <Badge variant={statusVariant(r.status)} dot class="queue-status">{STATUS_LABELS[r.status]}</Badge>
                 <div class="queue-end">
                   <span class="money">{formatMoney(r.totalCents)}</span>
                 </div>
               </a>
             </li>
           </ul>
-        </section>
+        </Card>
       </div>
     </Layout>
   </body>

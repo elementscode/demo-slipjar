@@ -1,5 +1,7 @@
 import "./style.css";
 import { redirect } from "@elements/app";
+import { Badge } from "@elements/ui/badge";
+import { Button } from "@elements/ui/button";
 import { CurrentUser, signout } from "#app/shared/services/auth";
 
 function onSignout() {
@@ -29,8 +31,8 @@ function onSignout() {
 
         <div class="layout-user row gap-3">
           <span class="layout-name">{user.name}</span>
-          <span e:if={user.role === "approver"} class="pill is-accent">Approver</span>
-          <button class="is-ghost is-sm" onclick={() => onSignout()}>Sign out</button>
+          <Badge e:if={user.role === "approver"} variant="accent">Approver</Badge>
+          <Button variant="ghost" size="sm" onclick={() => onSignout()}>Sign out</Button>
         </div>
       </div>
     </header>

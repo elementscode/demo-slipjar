@@ -19,15 +19,18 @@ export const STATUS_LABELS: Record<ReportStatus, string> = {
   returned: "Sent back",
 };
 
-const STATUS_PILLS: Record<ReportStatus, string> = {
-  draft: "",
-  submitted: "is-info",
-  approved: "is-success",
-  returned: "is-warning",
+export type StatusVariant = "secondary" | "info" | "success" | "warning";
+
+const STATUS_VARIANTS: Record<ReportStatus, StatusVariant> = {
+  draft: "secondary",
+  submitted: "info",
+  approved: "success",
+  returned: "warning",
 };
 
-export function statusPill(status: ReportStatus): string {
-  return ["pill", STATUS_PILLS[status]].filter(Boolean).join(" ");
+/** The Badge variant for a report status. */
+export function statusVariant(status: ReportStatus): StatusVariant {
+  return STATUS_VARIANTS[status];
 }
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
