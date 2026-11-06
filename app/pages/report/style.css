@@ -63,6 +63,7 @@
 }
 
 .list {
+  align-self: stretch;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -171,10 +172,6 @@
   font-size: var(--text-sm);
 }
 
-.decision textarea {
-  min-height: 5rem;
-}
-
 .decision-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -247,12 +244,12 @@
   font-size: var(--text-sm);
 }
 
-.attach .line {
-  grid-template-columns: auto minmax(0, 1fr) auto;
-}
-
 .owner-actions {
   justify-content: space-between;
+}
+
+.attach .line {
+  grid-template-columns: auto minmax(0, 1fr) auto;
 }
 
 @keyframes land {

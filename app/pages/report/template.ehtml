@@ -2,7 +2,13 @@ import "./style.css";
 import { redirect } from "@elements/app";
 import type { Listener } from "@elements/app";
 import favicon from "#app/shared/assets/favicons/favicon.svg";
+import { Alert } from "@elements/ui/alert";
 import { Badge } from "@elements/ui/badge";
+import { Button } from "@elements/ui/button";
+import { Card, CardContent, CardFooter } from "@elements/ui/card";
+import { Checkbox, CheckboxGroup } from "@elements/ui/checkbox";
+import { Field } from "@elements/ui/field";
+import { Textarea } from "@elements/ui/textarea";
 import { Layout } from "#app/shared/templates/layout";
 import { CurrentUser } from "#app/shared/services/auth";
 import { ReportDetail, ReportSummary, Expense } from "#app/shared/services/reports";
@@ -150,24 +156,20 @@ function onDelete(view: ReportView) {
 
       <div class="report-layout">
         <div class="report-main stack is-lg">
-          <div e:if={view.detail.report.status === "returned"} class="callout is-warning" role="status">
-            <p class="callout-title">Sent back by {view.detail.report.deciderName} on {formatWhen(view.detail.report.decidedAt)}</p>
-            <p>{view.detail.report.decisionComment}</p>
-          </div>
+          <Alert e:if={view.detail.report.status === "returned"} variant="warning" role="status"
+                 title={`Sent back by ${view.detail.report.deciderName} on ${formatWhen(view.detail.report.decidedAt)}`}
+                 description={view.detail.report.decisionComment ?? ""} />
 
-          <div e:if={view.detail.report.status === "approved"} class="callout is-success" role="status">
-            <p class="callout-title">Approved by {view.detail.report.deciderName} on {formatWhen(view.detail.report.decidedAt)}</p>
-            <p e:if={view.detail.report.decisionComment}>{view.detail.report.decisionComment}</p>
-          </div>
+          <Alert e:if={view.detail.report.status === "approved"} variant="success" role="status"
+                 title={`Approved by ${view.detail.report.deciderName} on ${formatWhen(view.detail.report.decidedAt)}`}
+                 description={view.detail.report.decisionComment ?? ""} />
 
-          <p e:if={view.error} class="error" role="alert">{view.error}</p>
+          <Alert e:if={view.error} variant="danger" description={view.error} />
 
-          <section class="card" aria-labelledby="lines-title">
-            <div class="card-head">
-              <h2 id="lines-title">Expenses</h2>
-            </div>
-
-            <p e:if={view.detail.expenses.length === 0} class="card-body hint">No expenses on this report yet.</p>
+          <Card title="Expenses" level={2} attrs={{ role: "region", "aria-label": "Expenses" }}>
+            <CardContent e:if={view.detail.expenses.length === 0}>
+              <p class="hint">No expenses on this report yet.</p>
+            </CardContent>
 
             <ul e:else class="list">
               <li e:for={e of view.detail.expenses}
@@ -186,8 +188,8 @@ function onDelete(view: ReportView) {
 
                 <div class="line-end">
                   <span class="money">{formatMoney(e.amountCents)}</span>
-                  <button e:if={canEdit(user, view.detail.report)} class="is-ghost is-sm"
-                          disabled={view.busy} onclick={() => onDetach(view, e)}>Remove</button>
+                  <Button e:if={canEdit(user, view.detail.report)} variant="ghost" size="sm"
+                          disabled={view.busy} onclick={() => onDetach(view, e)}>Remove</Button>
                 </div>
               </li>
             </ul>
@@ -197,26 +199,24 @@ function onDelete(view: ReportView) {
               <span class="money">{formatMoney(view.detail.report.totalCents)}</span>
             </div>
 
-            <div e:if={canEdit(user, view.detail.report)} class="card-foot owner-actions">
-              <button e:if={view.detail.report.status === "draft"} class="is-ghost is-danger"
-                      disabled={view.busy} onclick={() => onDelete(view)}>Delete draft</button>
+            <CardFooter e:if={canEdit(user, view.detail.report)} class="owner-actions">
+              <Button e:if={view.detail.report.status === "draft"} variant="danger"
+                      disabled={view.busy} onclick={() => onDelete(view)}>Delete draft</Button>
               <span e:else></span>
-              <button class="is-primary" disabled={view.busy || view.detail.expenses.length === 0}
+              <Button variant="primary" disabled={view.busy || view.detail.expenses.length === 0}
                       onclick={() => onSubmit(view)}>
                 {view.detail.report.status === "returned" ? "Resubmit for approval" : "Submit for approval"}
-              </button>
-            </div>
-          </section>
+              </Button>
+            </CardFooter>
+          </Card>
 
-          <section e:if={canEdit(user, view.detail.report) && view.unfiled.length > 0} class="card attach" aria-labelledby="attach-title">
-            <div class="card-head">
-              <h2 id="attach-title">Add expenses to this report</h2>
-            </div>
-
+          <Card e:if={canEdit(user, view.detail.report) && view.unfiled.length > 0} class="attach"
+                title="Add expenses to this report" level={2} attrs={{ role: "region", "aria-label": "Add expenses to this report" }}>
+            <CheckboxGroup value={view.picks}>
             <ul class="list">
               <li e:for={e of view.unfiled}>
                 <label class="line">
-                  <input type="checkbox" group={view.picks} value={e.id}>
+                  <Checkbox value={e.id} />
                   <span class="line-text">
                     <span class="line-merchant">{e.merchant}</span>
                     <span class="line-meta">{formatDay(e.spentOn)} · {CATEGORY_LABELS[e.category]}</span>
@@ -225,60 +225,51 @@ function onDelete(view: ReportView) {
                 </label>
               </li>
             </ul>
+            </CheckboxGroup>
 
-            <div class="card-foot">
-              <button disabled={view.busy || view.picks.length === 0} onclick={() => onAttach(view)}>
+            <CardFooter>
+              <Button disabled={view.busy || view.picks.length === 0} onclick={() => onAttach(view)}>
                 Add {view.picks.length > 0 ? plural(view.picks.length, "expense") : "selected"}
-              </button>
-            </div>
-          </section>
+              </Button>
+            </CardFooter>
+          </Card>
         </div>
 
         <aside class="report-side stack is-lg">
-          <section e:if={canDecide(user, view.detail.report)} class="card decision" aria-labelledby="decide-title">
-            <div class="card-head">
-              <h2 id="decide-title">Your decision</h2>
-            </div>
-
-            <div class="card-body stack">
-              <div class="field">
-                <label for="comment">Comment</label>
-                <textarea id="comment" value={view.comment}
-                          placeholder="Required when sending back. Optional when approving."/>
-              </div>
+          <Card e:if={canDecide(user, view.detail.report)} class="decision" title="Your decision" level={2}
+                attrs={{ role: "region", "aria-label": "Your decision" }}>
+            <CardContent class="stack">
+              <Field label="Comment" reserveError={false}>
+                <Textarea value={view.comment} placeholder="Required when sending back. Optional when approving." />
+              </Field>
 
               <div class="decision-actions">
-                <button class="is-danger" disabled={view.busy} onclick={() => onDecide(view, "returned")}>Send back</button>
-                <button class="is-primary" disabled={view.busy} onclick={() => onDecide(view, "approved")}>Approve</button>
+                <Button variant="danger" disabled={view.busy} onclick={() => onDecide(view, "returned")}>Send back</Button>
+                <Button variant="primary" disabled={view.busy} onclick={() => onDecide(view, "approved")}>Approve</Button>
               </div>
-            </div>
-          </section>
+            </CardContent>
+          </Card>
 
-          <section e:if={selected(view)} class="card" aria-labelledby="viewer-title">
-            <div class="card-head">
-              <h2 id="viewer-title">Receipt</h2>
-            </div>
+          <Card e:if={selected(view)} title="Receipt" level={2} attrs={{ role: "region", "aria-label": "Receipt" }}>
 
             <a e:if={selected(view)?.receiptUrl} class="viewer" href={selected(view)?.receiptUrl} target="_blank" rel="noopener">
               <img src={selected(view)?.receiptUrl} alt={`Receipt from ${selected(view)?.merchant}`} width="320" height="520">
             </a>
-            <p e:else class="card-body hint">No receipt image.</p>
+            <CardContent e:else>
+              <p class="hint">No receipt image.</p>
+            </CardContent>
 
-            <div class="card-foot viewer-caption row">
+            <CardFooter class="viewer-caption">
               <span>{selected(view)?.merchant}</span>
               <span class="money">{formatMoney(selected(view)?.amountCents ?? 0)}</span>
-            </div>
-          </section>
+            </CardFooter>
+          </Card>
 
         </aside>
 
         <div class="report-history">
-          <section class="card" aria-labelledby="history-title">
-            <div class="card-head">
-              <h2 id="history-title">History</h2>
-            </div>
-
-            <div class="card-body">
+          <Card title="History" level={2} attrs={{ role: "region", "aria-label": "History" }}>
+            <CardContent>
               <p e:if={view.detail.events.length === 0} class="hint">Not submitted yet. Started {formatWhen(view.detail.report.createdAt)}.</p>
 
               <ol e:else class="timeline">
@@ -291,8 +282,8 @@ function onDelete(view: ReportView) {
                   </div>
                 </li>
               </ol>
-            </div>
-          </section>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </Layout>
