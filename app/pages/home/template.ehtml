@@ -2,7 +2,18 @@ import "./style.css";
 import { redirect, ValidationError } from "@elements/app";
 import type { Listener } from "@elements/app";
 import favicon from "#app/shared/assets/favicons/favicon.svg";
+import { Alert } from "@elements/ui/alert";
 import { Badge } from "@elements/ui/badge";
+import { Button } from "@elements/ui/button";
+import { Card, CardHeader, CardTitle, CardFooter } from "@elements/ui/card";
+import { Checkbox, CheckboxGroup } from "@elements/ui/checkbox";
+import { DatePicker } from "@elements/ui/date-picker";
+import { Empty } from "@elements/ui/empty";
+import { Field } from "@elements/ui/field";
+import { Icon } from "@elements/ui/icon";
+import { Input } from "@elements/ui/input";
+import { NativeSelect } from "@elements/ui/native-select";
+import { Textarea } from "@elements/ui/textarea";
 import { Layout } from "#app/shared/templates/layout";
 import { CurrentUser } from "#app/shared/services/auth";
 import { ReportSummary, Expense } from "#app/shared/services/reports";
@@ -92,6 +103,8 @@ function onGroup(group: GroupState) {
   }
 }
 
+const CATEGORY_OPTIONS = CATEGORIES.map((c) => ({ value: c, label: CATEGORY_LABELS[c] }));
+
 function pendingCents(reports: ReportSummary[]): number {
   return reports.filter((r) => r.status === "submitted").reduce((sum, r) => sum + r.totalCents, 0);
 }
@@ -152,107 +165,93 @@ function reportMeta(report: ReportSummary): string {
       </div>
 
       <div class="home-grid">
-        <section class="home-add card" aria-labelledby="add-title">
-          <div class="card-head">
-            <h2 id="add-title">Add an expense</h2>
-          </div>
+        <Card class="home-add" attrs={{ role: "region", "aria-label": "Add an expense" }}>
+          <CardHeader>
+            <CardTitle level={2}>Add an expense</CardTitle>
+          </CardHeader>
 
           <form class="add-form card-body stack" onsubmit={() => onAdd(add, state)}>
-            <p e:if={add.error} class="error" role="alert">{add.error}</p>
+            <Alert e:if={add.error} variant="danger" description={add.error} />
 
             <div class="amount-row">
-              <div class="field">
-                <label for="spent-on">Date</label>
-                <input id="spent-on" type="date" value={add.form.spentOn} max={today}
-                       class={[add.errors.spentOn && "is-error"]} required>
-                <p e:if={add.errors.spentOn} class="error">{add.errors.spentOn?.[0]}</p>
-              </div>
+              <Field label="Date" error={add.errors.spentOn?.[0] ?? ""} reserveError={false}>
+                <DatePicker value={add.form.spentOn} max={today} block format={{ dateStyle: "medium" }}
+                            invalid={!!add.errors.spentOn} required />
+              </Field>
 
-              <div class="field">
-                <label for="amount">Amount</label>
-                <input id="amount" inputmode="decimal" placeholder="0.00" value={add.form.amount}
-                       class={[add.errors.amount && "is-error"]} autocomplete="off" required>
-                <p e:if={add.errors.amount} class="error">{add.errors.amount?.[0]}</p>
-              </div>
+              <Field label="Amount" error={add.errors.amount?.[0] ?? ""} reserveError={false}>
+                <Input value={add.form.amount} placeholder="0.00" invalid={!!add.errors.amount}
+                       attrs={{ inputmode: "decimal", autocomplete: "off" }} required />
+              </Field>
             </div>
 
-            <div class="field">
-              <label for="merchant">Merchant</label>
-              <input id="merchant" placeholder="Where you paid" value={add.form.merchant}
-                     class={[add.errors.merchant && "is-error"]} autocomplete="off" required>
-              <p e:if={add.errors.merchant} class="error">{add.errors.merchant?.[0]}</p>
-            </div>
+            <Field label="Merchant" error={add.errors.merchant?.[0] ?? ""} reserveError={false}>
+              <Input value={add.form.merchant} placeholder="Where you paid" invalid={!!add.errors.merchant}
+                     attrs={{ autocomplete: "off" }} required />
+            </Field>
 
-            <div class="field">
-              <label for="category">Category</label>
-              <select id="category" value={add.form.category}>
-                <option e:for={c of CATEGORIES} value={c}>{CATEGORY_LABELS[c]}</option>
-              </select>
-            </div>
+            <Field label="Category" reserveError={false}>
+              <NativeSelect value={add.form.category} options={CATEGORY_OPTIONS} block />
+            </Field>
 
-            <div class="field">
-              <label for="note">Note</label>
-              <textarea id="note" placeholder="Who was there, what it was for" value={add.form.note}/>
-            </div>
+            <Field label="Note" reserveError={false}>
+              <Textarea value={add.form.note} rows={2} placeholder="Who was there, what it was for" />
+            </Field>
 
-            <div class="field receipt-pick">
-              <label for="receipt">Receipt photo</label>
-              <input e:for={slot of add.picker} id="receipt" type="file" accept="image/png,image/jpeg,image/webp,image/gif"
+            <Field class="receipt-pick" label="Receipt photo" description="JPEG, PNG or WebP, up to 8 MB."
+                   error={add.errors.receipt?.[0] ?? ""} reserveError={false}>
+              <input e:for={slot of add.picker} type="file" accept="image/png,image/jpeg,image/webp,image/gif"
                      value={add.form.receipt} class={[add.errors.receipt && "is-error"]}>
-              <p e:if={add.errors.receipt} class="error">{add.errors.receipt?.[0]}</p>
-              <p e:else class="hint">JPEG, PNG or WebP, up to 8 MB.</p>
-            </div>
+            </Field>
 
-            <button type="submit" class="is-primary is-block" disabled={add.busy}>
-              {add.busy ? "Adding…" : "Add expense"}
-            </button>
+            <Button type="submit" variant="primary" block loading={add.busy}>Add expense</Button>
           </form>
-        </section>
+        </Card>
 
-        <section class="home-unfiled card" aria-labelledby="unfiled-title">
-          <div class="card-head">
-            <h2 id="unfiled-title">Not on a report yet<span class="count">{state.unfiled.length}</span></h2>
-          </div>
+        <Card class="home-unfiled" attrs={{ role: "region", "aria-label": "Not on a report yet" }}>
+          <CardHeader>
+            <CardTitle level={2}>Not on a report yet<span class="count">{state.unfiled.length}</span></CardTitle>
+          </CardHeader>
 
-          <p e:if={state.unfiled.length === 0} class="empty">Every expense is on a report. New ones land here.</p>
+          <Empty e:if={state.unfiled.length === 0} description="Every expense is on a report. New ones land here." />
 
-          <ul e:else class="list">
-            <li e:for={e of state.unfiled} class={["expense-row", group.ids.includes(e.id) && "is-picked"]}>
-              <label class="expense-pick"><input type="checkbox" group={group.ids} value={e.id} aria-label={`Select ${e.merchant}`}></label>
-              <a e:if={e.receiptUrl} href={e.receiptUrl} target="_blank" rel="noopener">
-                <img class="thumb" src={e.receiptUrl} alt={`Receipt from ${e.merchant}`} width="40" height="40">
-              </a>
-              <span e:else class="thumb"></span>
-              <div class="expense-text">
-                <span class="expense-merchant truncate">{e.merchant}</span>
-                <span class="expense-meta truncate">{formatDay(e.spentOn)} · {CATEGORY_LABELS[e.category]}{e.note ? ` · ${e.note}` : ""}</span>
-              </div>
-              <span class="money">{formatMoney(e.amountCents)}</span>
-              <button class="remove is-ghost is-sm" aria-label={`Delete ${e.merchant}`}
-                      onclick={() => onDelete(state, group, e)}>
-                <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-                  <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-                </svg>
-              </button>
-            </li>
-          </ul>
+          <CheckboxGroup e:else value={group.ids}>
+            <ul class="list">
+              <li e:for={e of state.unfiled} class={["expense-row", group.ids.includes(e.id) && "is-picked"]}>
+                <label class="expense-pick"><Checkbox value={e.id} attrs={{ "aria-label": `Select ${e.merchant}` }} /></label>
+                <a e:if={e.receiptUrl} href={e.receiptUrl} target="_blank" rel="noopener">
+                  <img class="thumb" src={e.receiptUrl} alt={`Receipt from ${e.merchant}`} width="40" height="40">
+                </a>
+                <span e:else class="thumb"></span>
+                <div class="expense-text">
+                  <span class="expense-merchant truncate">{e.merchant}</span>
+                  <span class="expense-meta truncate">{formatDay(e.spentOn)} · {CATEGORY_LABELS[e.category]}{e.note ? ` · ${e.note}` : ""}</span>
+                </div>
+                <span class="money">{formatMoney(e.amountCents)}</span>
+                <Button class="remove" variant="ghost" size="sm" icon label={`Delete ${e.merchant}`}
+                        onclick={() => onDelete(state, group, e)}>
+                  <Icon name="x" />
+                </Button>
+              </li>
+            </ul>
+          </CheckboxGroup>
 
-          <div e:if={state.unfiled.length > 0} class="card-foot">
+          <CardFooter e:if={state.unfiled.length > 0}>
             <form class="group-form" onsubmit={() => onGroup(group)}>
-              <input placeholder={group.ids.length === 0 ? "Select expenses, then name the report" : `Name this report (${plural(group.ids.length, "expense")}, ${formatMoney(pickedCents(state.unfiled, group.ids))})`}
-                     value={group.title} aria-label="Report name">
-              <button type="submit" class="is-primary" disabled={group.ids.length === 0 || !group.title.trim()}>Create report</button>
+              <Input value={group.title} placeholder={group.ids.length === 0 ? "Select expenses, then name the report" : `Name this report (${plural(group.ids.length, "expense")}, ${formatMoney(pickedCents(state.unfiled, group.ids))})`}
+                     attrs={{ "aria-label": "Report name" }} />
+              <Button type="submit" variant="primary" disabled={group.ids.length === 0 || !group.title.trim()}>Create report</Button>
             </form>
-            <p e:if={group.error} class="error group-error" role="alert">{group.error}</p>
-          </div>
-        </section>
+            <Alert e:if={group.error} variant="danger" class="group-error" description={group.error} />
+          </CardFooter>
+        </Card>
 
-        <section class="home-reports card" aria-labelledby="reports-title">
-          <div class="card-head">
-            <h2 id="reports-title">Reports<span class="count">{state.reports.length}</span></h2>
-          </div>
+        <Card class="home-reports" attrs={{ role: "region", "aria-label": "Reports" }}>
+          <CardHeader>
+            <CardTitle level={2}>Reports<span class="count">{state.reports.length}</span></CardTitle>
+          </CardHeader>
 
-          <p e:if={state.reports.length === 0} class="empty">No reports yet. Select expenses above to start one.</p>
+          <Empty e:if={state.reports.length === 0} description="No reports yet. Select expenses above to start one." />
 
           <ul e:else class="list">
             <li e:for={r of state.reports} class={[state.flashId === r.id && "is-flash"]}>
@@ -271,7 +270,7 @@ function reportMeta(report: ReportSummary): string {
               </a>
             </li>
           </ul>
-        </section>
+        </Card>
       </div>
     </Layout>
   </body>
